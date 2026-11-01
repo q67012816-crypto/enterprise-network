@@ -2,7 +2,7 @@
 
 调研时间：2026-11-01（KST）。来源：官方开发指南 `https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=<grp>&apiId=<id>`，
 页面正文快照保存在 `docs/guide_snapshots/<apiId>.txt`（公开页面，无密钥）。**本阶段没有 API 密钥，所有接口均未实际调用**，
-返回字段以官方文档为准，实际返回是否一致 = 未验证。
+返回字段以官方文档为准；Phase B 实测 company / otrCprInvstmntSttus / hyslrSttus / accnutAdtorNmNdAdtOpinion / fnlttMultiAcnt / list 字段与指南一致（已验证）。数值为带逗号字符串，空值为 "-"。
 
 ## 通用约定（官方文档原文确认）
 - 认证：所有接口必填 `crtfc_key`（STRING(40)，发급받은 인증키）。
@@ -39,7 +39,7 @@
 ## 标签候选来源（Phase B 详查，这里仅列接口是否存在）
 | 候选标签 | 来源 | 状态 |
 |---|---|---|
-|审计意见非适正（한정/부적정/의견거절）|`accnutAdtorNmNdAdtOpinion.json`.adt_opinion|接口存在；取值文本格式 未验证|
+|审计意见非适正（한정/부적정/의견거절）|`accnutAdtorNmNdAdtOpinion.json`.adt_opinion|已验证：取值为 "적정의견"/"한정의견"/"의견거절"/空；period 形如 "제14기\n(당기)"；一家每期可多行|
 |부도발생|주요사항보고서 `dfOcr.json` (DS005/2020019)，参数 corp_code, bgn_de, end_de（2015 年以后）|接口存在|
 |영업정지|`bsnSp.json` (DS005/2020020)|接口存在|
 |회생절차 개시신청|`ctrcvsBgrq.json` (DS005/2020021)|接口存在|
@@ -52,9 +52,16 @@
 
 ## 最新完整年度
 - 12 月结算公司的 사업보고서 法定提交期限为结算后 90 日（一般 3 月末）——此为常识，非本次从 OpenDART 页面核实 = 未验证。
-- 今天 2026-11-01，**推定最新完整年度 bsns_year=2025（reprt_code=11011），备份 2024**。是否已发布 = **未验证**（需密钥调用 `list.json?pblntf_detail_ty=A001&bgn_de=20260101` 或抽样调用 otrCprInvstmntSttus 确认）。
+- 今天 2026-11-01，**推定最新完整年度 bsns_year=2025（reprt_code=11011），备份 2024**。**已验证已发布**：otrCprInvstmntSttus 2025 年 2,609/2,655 家 status 000（46 家 013 无数据）；2024 年 2,519 家 000、136 家 013。
 - 非 12 月结算公司（acc_mt≠12）的 bsns_year 语义 = 未验证，Phase B 用 company.acc_mt 标记。
 
 ## 已知局限（来自文档本身）
 - 타법인 출자현황只给被投资方**名称**（inv_prm），无 corp_code/法人登记号 → 必须做名称实体解析。
 - 该表只覆盖"上市公司作为投资方"披露的对外出资；反向（谁持有我）需靠 hyslrSttus（仅最大股东及特殊关系人，含个人）。
+
+## Phase B measurements (2026-11-01, with key)
+- Status codes seen: 000 and 013 (no data). 020, 800 and 900 were never seen. Today about 13.8k requests (counted from cache files) never triggered 020, so whether the 020 limit is counted per day is still 未验证.
+- Latency is about 1.4–2.6 s per request. With 10 threads and a global spacing of 0.25 s, throughput was about 3–4 requests/s and no throttling occurred.
+- The hyslrSttus fields nm / relate / trmend_posesn_stock_qota_rt were verified.
+- list.json: B001 and I003 were fetched by quarter for 2024–2025 (87 cached calls in total).
+- Guide snapshots for 2019002/2019006/2019007/2019016/2019017/2019018/2020009/2020019–22/2022001 were added to docs/guide_snapshots/ (HTML converted to text).

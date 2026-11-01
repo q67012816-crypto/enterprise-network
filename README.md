@@ -4,7 +4,7 @@
 
 ## 数据来源
 - OpenDART（금융감독원 전자공시 오픈API，https://opendart.fss.or.kr）。接口详情见 `docs/api-notes.md`。
-- 主边来源：`otrCprInvstmntSttus.json`（타법인 출자현황），`reprt_code=11011`（사업보고서），`bsns_year=2025`（主，是否已发布 未验证）+ `2024`（稳健性）。
+- 主边来源：`otrCprInvstmntSttus.json`（타법인 출자현황），`reprt_code=11011`（사업보고서），`bsns_year=2025`（主；已实测发布：2,609/2,655 家 status 000，46 家 013）+ `2024`（稳健性）。
 - 节点属性：`corpCode.xml`（corp_code、stock_code）+ `company.json`（corp_cls 市场、induty_code 行业）。
 
 ## 范围与假设
@@ -39,3 +39,11 @@ export OPENDART_API_KEY=...                  # 只在 shell 中设置，勿写�
 cd src && python pipeline.py all --year 2025 --prev-year 2024   # 可中断；重跑自动续跑（缓存命中不计次数）
 ```
 目录：`data/raw/`（原始响应缓存，不提交）、`data/state/`（每日调用计数）、`data/interim/`、`data/processed/`、`reports/`。
+
+## Phase B results and commands (2026-11-01)
+- Reports: `reports/DEGREE_REPORT.md`, `reports/LABEL_FEASIBILITY.md`, plots in `reports/*.png`, statistics in `reports/stats_*.json`, `reports/labels_2025.json`
+- Data: `data/processed/nodes.csv`, `edges.csv` (directed), `edges_undirected.csv`, `groups.csv` (approximate group proxy, 未验证), `discarded_investees.csv`, `unmatched_investees.csv`, `labels_*.csv`, `build_counts.json`
+- Commands: see "How to reproduce" in DEGREE_REPORT. Concurrency is set by `DART_WORKERS` (default 10), and the global spacing between requests by `DART_MIN_INTERVAL` (default 0.25 s).
+- Discard categories: summary_or_empty / non_listed_domestic / foreign_likely (regex) / ambiguous / unmatched; self-loops are removed. There is no "individual" category, because this endpoint only lists investee corporations.
+- Group proxy: hyslrSttus "본인" (or the largest shareholder) → climb up through listed companies, ≤6 levels. This is not the 공정위 기업집단 designation.
+- Known engineering issue: `data/state/calls.json` is overwritten when several processes run at once, so the count is undercounted. The actual number of requests today is about 13.8k (counted from the `.meta.json` files in the raw cache), below the budget. Run only one fetching process at a time.
