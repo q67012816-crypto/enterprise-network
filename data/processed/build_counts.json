@@ -1,0 +1,20 @@
+{
+ "2025": {
+  "rows_total": 32900,
+  "disc_unmatched": 12567,
+  "disc_foreign_likely": 8508,
+  "disc_summary_or_empty": 3122,
+  "disc_non_listed_domestic": 6599,
+  "kept_rows": 2098,
+  "self_loop": 6
+ },
+ "2024": {
+  "rows_total": 31644,
+  "disc_unmatched": 12110,
+  "disc_summary_or_empty": 2995,
+  "disc_non_listed_domestic": 6401,
+  "disc_foreign_likely": 8216,
+  "kept_rows": 1917,
+  "self_loop": 5
+ }
+}

@@ -8,7 +8,7 @@
 from __future__ import annotations
 import hashlib, json, os, re, time, datetime as dt
 from pathlib import Path
-import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.parse, urllib.error, threading
 
 BASE = "https://opendart.fss.or.kr/api/"
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,7 +37,7 @@ def cache_key(endpoint: str, params: dict) -> str:
 
 class DartClient:
     def __init__(self, raw_dir: Path | None = None, state_dir: Path | None = None,
-                 min_interval: float = 0.7, max_retries: int = 4,
+                 min_interval: float = float(os.environ.get("DART_MIN_INTERVAL", "0.25")), max_retries: int = 4,
                  daily_budget: int = DEFAULT_DAILY_BUDGET, fetcher=None, sleep=time.sleep):
         self.raw_dir = Path(raw_dir or ROOT / "data/raw")
         self.state_dir = Path(state_dir or ROOT / "data/state")
@@ -45,6 +45,7 @@ class DartClient:
         self.fetcher = fetcher or self._http_get
         self.sleep = sleep
         self._last = 0.0
+        self._lock = threading.Lock()
 
     # ---- state ----
     def _state_path(self):
@@ -92,12 +93,15 @@ class DartClient:
         url = BASE + endpoint + "?" + urllib.parse.urlencode({"crtfc_key": self._key(), **params})
         err = None
         for attempt in range(self.max_retries + 1):
-            wait = self.min_interval - (time.monotonic() - self._last)
-            if wait > 0:
-                self.sleep(wait)
-            self._last = time.monotonic()
-            try:
+            with self._lock:  # global spacing + counter, thread-safe
+                if self.calls_today() >= self.daily_budget:
+                    raise DailyLimitReached(f"daily budget {self.daily_budget} reached")
+                wait = self.min_interval - (time.monotonic() - self._last)
+                if wait > 0:
+                    self.sleep(wait)
+                self._last = time.monotonic()
                 self._bump()
+            try:
                 body = self.fetcher(url)
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
                 err = redact(repr(e)); self.sleep(2 ** attempt); continue

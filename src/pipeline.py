@@ -5,8 +5,11 @@ Usage: python src/pipeline.py <step> [--year 2025] [--prev-year 2024]
 Steps: corpcodes | listed | overview | invest | resolve | build | all
 """
 from __future__ import annotations
-import argparse, csv, io, json, re, sys, zipfile
+import os, argparse, csv, io, json, re, sys, zipfile
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+WORKERS = int(os.environ.get("DART_WORKERS", "10"))
+
 from pathlib import Path
 from dart_client import DartClient, DailyLimitReached, ROOT
 
@@ -36,8 +39,9 @@ def step_overview(c: DartClient):
     """company.json for every corp with a stock_code -> corp_cls (Y/K/N/E), induty_code, jurir_no."""
     rows = [r for r in _read(INTERIM / "corp_codes.csv") if r["stock_code"]]
     out = []
-    for r in rows:
-        j = c.get_json("company.json", {"corp_code": r["corp_code"]})
+    with ThreadPoolExecutor(WORKERS) as ex:
+        js = list(ex.map(lambda r: c.get_json("company.json", {"corp_code": r["corp_code"]}), rows))
+    for r, j in zip(rows, js):
         out.append({k: j.get(k, "") for k in ["corp_code", "corp_name", "stock_name", "stock_code",
                     "corp_cls", "induty_code", "jurir_no", "bizr_no", "acc_mt", "status"]} | {"corp_code": r["corp_code"]})
     _write(INTERIM / "company_overview.csv", out)
@@ -54,9 +58,11 @@ def step_listed(c: DartClient):
 def step_invest(c: DartClient, years):
     out = []
     for y in years:
-        for r in _read(INTERIM / "listed.csv"):
-            j = c.get_json("otrCprInvstmntSttus.json",
-                           {"corp_code": r["corp_code"], "bsns_year": str(y), "reprt_code": REPRT_ANNUAL})
+        rows = _read(INTERIM / "listed.csv")
+        with ThreadPoolExecutor(WORKERS) as ex:
+            js = list(ex.map(lambda r: c.get_json("otrCprInvstmntSttus.json",
+                           {"corp_code": r["corp_code"], "bsns_year": str(y), "reprt_code": REPRT_ANNUAL}), rows))
+        for r, j in zip(rows, js):
             for it in j.get("list", []) or []:
                 out.append({"src_corp_code": r["corp_code"], "bsns_year": y, "api_status": j.get("status"), **it})
             if not j.get("list"):
