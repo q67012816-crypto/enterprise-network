@@ -1,0 +1,81 @@
+{
+ "degree_definition": {
+  "nodes": 2655,
+  "undirected_edges": 2002,
+  "mean_degree_2E_over_N": 1.508,
+  "edges_per_node_E_over_N": 0.754,
+  "isolated": 1154
+ },
+ "audit_label_strict_dangi_string_only": {
+  "valid": 2481,
+  "positives": 38,
+  "deg0_valid": 1067,
+  "deg0_pos": 26
+ },
+ "audit_label": {
+  "rule": "당기 = rows with the highest 제N기 per company (fallback: period contains (당기)), since ~106 companies format period without (당기); blank opinion excluded; positive if any row in 의견거절/한정의견/부적정의견",
+  "companies_with_any_row": 2557,
+  "valid_nonblank": 2539,
+  "positives": 40,
+  "valid_in_node_set": 2539,
+  "by_degree": {
+   "deg0": {
+    "valid": 1088,
+    "positives": 26
+   },
+   "deg1_2": {
+    "valid": 983,
+    "positives": 12
+   },
+   "deg3plus": {
+    "valid": 468,
+    "positives": 2
+   }
+  }
+ },
+ "zero_missing_pct": {
+  "missing|all_period_end_fields_missing": 153,
+  "missing|holding_present_pct_zero_or_missing (rounding/missing pct)": 159,
+  "missing|period_end_zero (exited/disposed)": 5,
+  "zero|all_period_end_fields_missing": 17,
+  "zero|holding_present_pct_zero_or_missing (rounding/missing pct)": 183,
+  "zero|period_end_zero (exited/disposed)": 41
+ },
+ "isolated_sensitivity": {
+  "baseline": {
+   "edges": 2002,
+   "isolated": 1154
+  },
+  "drop_zero_pct": {
+   "edges": 1763,
+   "isolated": 1203
+  },
+  "drop_exited_only": {
+   "edges": 1959,
+   "isolated": 1168
+  },
+  "drop_zero_and_missing": {
+   "edges": 1454,
+   "isolated": 1284
+  }
+ },
+ "ownership_bands": {
+  "(0,5)": 777,
+  "missing": 317,
+  "[20,50] significant-influence presumption (K-IFRS 1028), NOT control": 359,
+  ">50 majority-owned (control likely, 未验证 per entity)": 127,
+  "0": 241,
+  "[5,20)": 266
+ },
+ "rcept_no_year": {
+  "2026": 2048,
+  "2025": 39
+ },
+ "group_labels": {
+  "rows": 1501,
+  "with_proxy": 1487,
+  "non_isolated_nodes": 1501,
+  "isolated_nodes_with_label": 0,
+  "note": "labels only computed for degree>=1 nodes; not used to add edges"
+ }
+}

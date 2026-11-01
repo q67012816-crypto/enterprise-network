@@ -65,9 +65,12 @@ class DartClient:
         return self._load_state()["calls"]
 
     def _bump(self):
-        s = self._load_state(); s["calls"] += 1
+        import fcntl  # cross-process lock so concurrent scripts don't overwrite the counter
         self.state_dir.mkdir(parents=True, exist_ok=True)
-        self._state_path().write_text(json.dumps(s))
+        with open(self.state_dir / "calls.lock", "w") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX)
+            s = self._load_state(); s["calls"] += 1
+            tmp = self._state_path().with_suffix(".tmp"); tmp.write_text(json.dumps(s)); tmp.replace(self._state_path())
 
     # ---- http ----
     @staticmethod
