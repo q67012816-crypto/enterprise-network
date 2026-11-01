@@ -1,206 +1,218 @@
 {
  "year": 2024,
  "nodes": 2655,
- "edges_undirected": 0,
- "edges_directed": 0,
- "both_direction_pairs": 0,
- "components": 2655,
- "lcc_size": 1,
- "lcc_share": 0.0004,
- "non_isolated_components": 0,
+ "edges_undirected": 1842,
+ "edges_directed": 1904,
+ "both_direction_pairs": 62,
+ "components": 1356,
+ "lcc_size": 1099,
+ "lcc_share": 0.4139,
+ "non_isolated_components": 141,
  "degree_all": {
   "n": 2655,
-  "mean": 0.0,
-  "median": 0.0,
+  "mean": 1.388,
+  "median": 1.0,
   "p20": 0.0,
-  "p50": 0.0,
-  "p80": 0.0,
-  "p95": 0.0,
-  "p99": 0.0,
-  "max": 0,
-  "share_deg0": 1.0,
-  "share_deg1": 0.0,
-  "share_deg2": 0.0
+  "p50": 1.0,
+  "p80": 2.0,
+  "p95": 5.0,
+  "p99": 12.0,
+  "max": 65,
+  "share_deg0": 0.4576,
+  "share_deg1": 0.2561,
+  "share_deg2": 0.1262
  },
  "degree_by_market": {
   "KOSPI": {
    "n": 829,
-   "mean": 0.0,
-   "median": 0.0,
+   "mean": 2.53,
+   "median": 1.0,
    "p20": 0.0,
-   "p50": 0.0,
-   "p80": 0.0,
-   "p95": 0.0,
-   "p99": 0.0,
-   "max": 0,
-   "share_deg0": 1.0,
-   "share_deg1": 0.0,
-   "share_deg2": 0.0
+   "p50": 1.0,
+   "p80": 4.0,
+   "p95": 9.0,
+   "p99": 16.0,
+   "max": 65,
+   "share_deg0": 0.2799,
+   "share_deg1": 0.2449,
+   "share_deg2": 0.1701
   },
   "KOSDAQ": {
    "n": 1826,
-   "mean": 0.0,
+   "mean": 0.869,
    "median": 0.0,
    "p20": 0.0,
    "p50": 0.0,
-   "p80": 0.0,
-   "p95": 0.0,
-   "p99": 0.0,
-   "max": 0,
-   "share_deg0": 1.0,
-   "share_deg1": 0.0,
-   "share_deg2": 0.0
+   "p80": 2.0,
+   "p95": 3.0,
+   "p99": 6.75,
+   "max": 18,
+   "share_deg0": 0.5383,
+   "share_deg1": 0.2612,
+   "share_deg2": 0.1062
   }
  },
  "nodes_by_market": {
   "KOSDAQ": 1826,
   "KOSPI": 829
  },
- "edge_ratio_missing": 0,
- "edges_per_node": 0.0,
+ "edge_ratio_missing": 266,
+ "edges_per_node": 0.6938,
  "top20": [
   {
-   "corp_code": "00100601",
-   "corp_name": "(주)강원에너지",
+   "corp_code": "00126380",
+   "corp_name": "삼성전자(주)",
+   "market": "KOSPI",
+   "degree": 65,
+   "group_proxy": "이 재 용"
+  },
+  {
+   "corp_code": "00112998",
+   "corp_name": "서울보증보험(주)",
+   "market": "KOSPI",
+   "degree": 43,
+   "group_proxy": "예금보험공사"
+  },
+  {
+   "corp_code": "00110893",
+   "corp_name": "대신증권(주)",
+   "market": "KOSPI",
+   "degree": 29,
+   "group_proxy": "양홍석"
+  },
+  {
+   "corp_code": "00164973",
+   "corp_name": "현대해상화재보험(주)",
+   "market": "KOSPI",
+   "degree": 25,
+   "group_proxy": "정몽윤"
+  },
+  {
+   "corp_code": "00164742",
+   "corp_name": "현대자동차(주)",
+   "market": "KOSPI",
+   "degree": 23,
+   "group_proxy": "현대자동차"
+  },
+  {
+   "corp_code": "00266961",
+   "corp_name": "네이버(주)",
+   "market": "KOSPI",
+   "degree": 23,
+   "group_proxy": "국민연금공단"
+  },
+  {
+   "corp_code": "00124805",
+   "corp_name": "(주)푸른저축은행",
    "market": "KOSDAQ",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 18,
+   "group_proxy": "주신홍"
   },
   {
-   "corp_code": "00100939",
-   "corp_name": "강남제비스코(주)",
+   "corp_code": "00149655",
+   "corp_name": "삼성물산(주)",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 18,
+   "group_proxy": "이 재 용"
   },
   {
-   "corp_code": "00101044",
-   "corp_name": "(주)에이프로젠바이오로직스",
+   "corp_code": "00138242",
+   "corp_name": "케이지모빌리티(주)",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00101220",
-   "corp_name": "KG케미칼(주)",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00101433",
-   "corp_name": "(주)경농",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00101488",
-   "corp_name": "(주)경동나비엔",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00101549",
-   "corp_name": "경동제약(주)",
-   "market": "KOSDAQ",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 17,
+   "group_proxy": "KG에코솔루션"
   },
   {
    "corp_code": "00101628",
    "corp_name": "(주)경방",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 16,
+   "group_proxy": "김담"
   },
   {
-   "corp_code": "00101664",
-   "corp_name": "(주)경보제약",
+   "corp_code": "00122056",
+   "corp_name": "미창석유공업(주)",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00101752",
-   "corp_name": "(주)케이씨피드",
-   "market": "KOSDAQ",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102113",
-   "corp_name": "(주)경인양행",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102140",
-   "corp_name": "(주)케이아이이",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102353",
-   "corp_name": "경창산업(주)",
-   "market": "KOSDAQ",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102432",
-   "corp_name": "계룡건설산업(주)",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102618",
-   "corp_name": "계양전기(주)",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00102751",
-   "corp_name": "고려산업(주)",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 16,
+   "group_proxy": "유재순"
   },
   {
    "corp_code": "00102858",
    "corp_name": "고려아연(주)",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 15,
+   "group_proxy": "(유)와이피씨"
   },
   {
-   "corp_code": "00103006",
-   "corp_name": "고려제강(주)",
+   "corp_code": "00106641",
+   "corp_name": "기아(주)",
    "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 15,
+   "group_proxy": "기아(주)"
   },
   {
-   "corp_code": "00103015",
-   "corp_name": "고려제약(주)",
+   "corp_code": "00120182",
+   "corp_name": "엔에이치투자증권(주)",
+   "market": "KOSPI",
+   "degree": 15,
+   "group_proxy": "농협금융지주(주)"
+  },
+  {
+   "corp_code": "00164788",
+   "corp_name": "현대모비스(주)",
+   "market": "KOSPI",
+   "degree": 15,
+   "group_proxy": "현대모비스"
+  },
+  {
+   "corp_code": "00113526",
+   "corp_name": "(주)대한항공",
+   "market": "KOSPI",
+   "degree": 14,
+   "group_proxy": "조원태"
+  },
+  {
+   "corp_code": "00139214",
+   "corp_name": "삼성화재해상보험(주)",
+   "market": "KOSPI",
+   "degree": 14,
+   "group_proxy": "이 재 용"
+  },
+  {
+   "corp_code": "00126256",
+   "corp_name": "삼성생명보험(주)",
+   "market": "KOSPI",
+   "degree": 13,
+   "group_proxy": "이 재 용"
+  },
+  {
+   "corp_code": "00133511",
+   "corp_name": "(주)SG세계물산",
+   "market": "KOSPI",
+   "degree": 13,
+   "group_proxy": "(주)SG고려"
+  },
+  {
+   "corp_code": "00148595",
+   "corp_name": "(주)제일테크노스",
    "market": "KOSDAQ",
-   "degree": 0,
-   "group_proxy": "未获取"
-  },
-  {
-   "corp_code": "00103042",
-   "corp_name": "(주)케이씨티시",
-   "market": "KOSPI",
-   "degree": 0,
-   "group_proxy": "未获取"
+   "degree": 13,
+   "group_proxy": "나주영"
   }
  ],
- "build_counts": {},
- "row_coverage_kept": null,
- "share_nodes_out_edge": 0.0
+ "intra_group_edges": {
+  "edges_with_both_groups_known": 1739,
+  "same_group_proxy": 531
+ },
+ "build_counts": {
+  "rows_total": 31644,
+  "disc_unmatched": 12110,
+  "disc_summary_or_empty": 2995,
+  "disc_non_listed_domestic": 6401,
+  "disc_foreign_likely": 8216,
+  "kept_rows": 1917,
+  "self_loop": 5
+ },
+ "row_coverage_kept": 0.0606,
+ "share_nodes_out_edge": 0.2874
 }

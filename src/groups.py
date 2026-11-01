@@ -28,6 +28,11 @@ def main(year):
     und = [e for e in _read(PROC / "edges_undirected.csv") if int(e["bsns_year"]) == year]
     deg = Counter([e["u"] for e in und] + [e["v"] for e in und])
     cache, out = {}, []
+    import os
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(int(os.environ.get('DART_WORKERS','10'))) as ex:  # prefetch (cached)
+        for code, res in zip(sorted(deg), ex.map(lambda k: controller(c, k, year), sorted(deg))):
+            cache[code] = res
     def ctrl(code):
         if code not in cache:
             cache[code] = controller(c, code, year)
