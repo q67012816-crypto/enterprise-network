@@ -1,0 +1,39 @@
+{
+ "firms_in_universe": 3270,
+ "by_status_now": {
+  "not_listed_now": 553,
+  "listed_now": 2610,
+  "konex_now": 107
+ },
+ "not_listed_now_by_class": {
+  "no_delisting_notice": 272,
+  "cause_notice_only": 101,
+  "cause_delisting_completed": 180
+ },
+ "not_listed_now_last_fy": {
+  "2018": 37,
+  "2019": 35,
+  "2020": 47,
+  "2021": 43,
+  "2022": 50,
+  "2023": 55,
+  "2024": 75,
+  "2025": 211
+ },
+ "firm_years_by_fy_listed_or_former": {
+  "2018": 2305,
+  "2019": 2409,
+  "2020": 2488,
+  "2021": 2556,
+  "2022": 2637,
+  "2023": 2724,
+  "2024": 2804,
+  "2025": 2820
+ },
+ "delisting_review_rows": 300,
+ "delisting_review_by_class": {
+  "cause_notice_only": 101,
+  "cause_delisting_completed": 180,
+  "konex_now": 19
+ }
+}

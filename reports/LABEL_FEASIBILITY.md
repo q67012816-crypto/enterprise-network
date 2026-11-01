@@ -1,3 +1,5 @@
+> **2026-11-01 correction**: under the corrected 당기 definition, audit opinions give 40 positives out of 2,539 valid companies (degree 0: 26/1,088). See `reports/CORRECTIONS.md` (a).
+
 # LABEL_FEASIBILITY: feasibility of candidate node labels (FY2025; no label is chosen here)
 
 Node set: the 2,655 currently listed companies. Data comes from `reports/labels_2025.json` and `data/processed/labels_*.csv`. Script: `cd src && ../.venv/bin/python labels.py --year 2025`.

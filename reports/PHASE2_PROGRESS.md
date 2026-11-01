@@ -11,3 +11,7 @@
   → otrCprInvstmntSttus returns the latest version, not the as-of-C version (limitation). → `data/processed/edges_dated.csv`, `reports/edge_dates.json`.
 - Step 2 probe: fnlttMultiAcnt is available for FY2015–2025 (2014 returns 013). Fields: assets, liabilities, equity, revenue, operating income, net income, pre-tax income; 자본금 is present in some years; **no interest expense**; each row has rcept_no.
 - otrCprInvstmntSttus before FY2020: the structured table is empty for some companies (삼성전자, 현대차, SK하이닉스, 삼성물산 return only "-"/"합계" for 2018–2020), while 네이버, 대한항공 and 경방 have data. Coverage is 未验证 until a full fetch.
+
+## 22:40 Step 1 (a)–(g) done → reports/CORRECTIONS.md
+- universe.py: 3,270 companies in the universe (2,610 listed now, 553 not listed now, 107 Konex); delisting_review.csv has 300 rows.
+- financials.py is running in the background: fnlttMultiAcnt for FY2018–2025, about 264 calls (logs/financials.log).

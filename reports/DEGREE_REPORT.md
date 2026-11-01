@@ -1,3 +1,5 @@
+> **2026-11-01 corrections**: see `reports/CORRECTIONS.md`. Mean degree = 2E/N = 1.508 (the 0.754 in the table is E/N). The ≥20% band means presumed significant influence, not control. The audit-label denominator has been changed. Survivor bias is addressed in Phase 2.
+
 # DEGREE_REPORT: KOSPI+KOSDAQ shareholding network (OpenDART), FY2025 main, FY2024 backup
 
 This report is descriptive only; no model was trained. Every number below comes from `reports/stats_2025.json` / `stats_2024.json` and `data/processed/*.csv`, which were generated in a single run.
@@ -79,7 +81,7 @@ Note: many high-degree nodes are **financial companies** (insurers, securities f
 
 ## Ownership % of edges (FY2025 directed, 1,770 rows with a %)
 <5%: 1,018 (57.5%) · 5–20%: 266 · 20–50%: 350 · ≥50%: 136. Another 317 edges have no % ("-" or empty).
-→ **Most edges are not control relationships**. If the downstream task needs control or group ties, filter with a threshold (for example ≥20%). That would cut the edge count sharply, probably below the stop line. 未验证; it has not been computed.
+→ **Most edges are not control relationships**. If the downstream task needs significant-influence ties (≥20% presumes significant influence, not control), filter with a threshold. That would cut the edge count sharply, probably below the stop line. 未验证; it has not been computed.
 
 ## Intra-group share (approximate)
 group_proxy is available for 1,501 companies with degree ≥1 (hyslrSttus status 000: 1,487; 013 (no data): 14). Of the 1,973 FY2025 undirected edges where both ends have a proxy, **584 (29.6%)** share the same proxy (FY2024: 531/1,739 = 30.5%).

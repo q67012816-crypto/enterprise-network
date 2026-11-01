@@ -47,3 +47,6 @@ cd src && python pipeline.py all --year 2025 --prev-year 2024   # 可中断；�
 - Discard categories: summary_or_empty / non_listed_domestic / foreign_likely (regex) / ambiguous / unmatched; self-loops are removed. There is no "individual" category, because this endpoint only lists investee corporations.
 - Group proxy: hyslrSttus "본인" (or the largest shareholder) → climb up through listed companies, ≤6 levels. This is not the 공정위 기업집단 designation.
 - Known engineering issue: `data/state/calls.json` is overwritten when several processes run at once, so the count is undercounted. The actual number of requests today is about 13.8k (counted from the `.meta.json` files in the raw cache), below the budget. Run only one fetching process at a time.
+
+## Phase 2 (in progress)
+Progress log: `reports/PHASE2_PROGRESS.md`. Corrections: `reports/CORRECTIONS.md`. New scripts: `src/corrections.py`, `edge_dates.py`, `universe.py`, `filings.py`, `financials.py`.
