@@ -1,0 +1,33 @@
+{
+ "edges_by_year": {
+  "2024": {
+   "edges": 1904,
+   "found_in_index": 1904,
+   "rcept_no_prefix_equals_rcept_dt": 1902,
+   "filed_2025": 1833,
+   "is_correction_filing": 561,
+   "after_Apr30_next_year": 296,
+   "is_original_filing": 1343,
+   "on_or_before_Apr30_next_year": 1608,
+   "filed_2026": 38,
+   "filed_2024": 33,
+   "prefix_differs": 2
+  },
+  "2025": {
+   "edges": 2087,
+   "found_in_index": 2087,
+   "rcept_no_prefix_equals_rcept_dt": 2081,
+   "filed_2026": 2048,
+   "is_original_filing": 1676,
+   "on_or_before_Apr30_next_year": 1894,
+   "is_correction_filing": 411,
+   "after_Apr30_next_year": 193,
+   "filed_2025": 39,
+   "prefix_differs": 6
+  }
+ },
+ "A001_index": {
+  "filings": 32236,
+  "rcept_no_prefix_equals_rcept_dt": 31892
+ }
+}
