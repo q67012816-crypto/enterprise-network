@@ -15,3 +15,8 @@
 ## 22:40 Step 1 (a)–(g) done → reports/CORRECTIONS.md
 - universe.py: 3,270 companies in the universe (2,610 listed now, 553 not listed now, 107 Konex); delisting_review.csv has 300 rows.
 - financials.py is running in the background: fnlttMultiAcnt for FY2018–2025, about 264 calls (logs/financials.log).
+
+## 23:00 Step 2 data availability
+- fnlttMultiAcnt FY2018–2025 has been fetched (`data/interim/fin_multi_raw.csv`, 236 calls). Coverage is in `reports/fin_coverage.json`. OFS covers 2,006/2,305 (87%) in 2018, rising to 2,764/2,820 (98%) in 2025; CFS covers 70–78%.
+  Decision: **OFS is the main specification** (ownership edges are parent-level investments, and OFS covers more firms); CFS is a sensitivity check. Interest expense is not in fnlttMultiAcnt; the reason for the ~300 uncovered firms per year in 2018–2022 (financial firms? no XBRL?) is 未验证.
+- invest_panel.py is running in the background (logs/invest_panel.log): otrCprInvstmntSttus for FY2023→2019, then 2024 and 2025 for formerly listed firms. Estimate: about 14k calls. It stops cleanly when today's budget (18,000) runs out; rerun the same command after 00:00 KST tomorrow to resume.
