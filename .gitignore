@@ -1,0 +1,10 @@
+.env
+.env.*
+data/raw/
+data/state/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.log
+data/interim/
+.venv/
