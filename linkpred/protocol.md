@@ -136,3 +136,17 @@ Registered on 2026-11-03 (KST). Committed before any dataset statistics were bui
   - **Post-hoc.** These metrics were added **after viewing** the 2024→2025 test results.
 - **Naming note.** This original text uses "Jack" in several places, and it is not edited. "Jack" and Mingsen Zhang are the same person. The confirmatory protocol `protocol_confirm.md` uses Mingsen Zhang.
 - **Column note.** The `label_doc_only` column produced by `build_v2.py` has been renamed `also_in_2024_doc_set`. It only marks that a pair is also in the 2024 document-recovered set; it **does not** by itself mean the label is contaminated.
+- **2026-11-03 (KST), A6：S2 的比较对象（最强单一启发式），按验证集组内 AUC 选出。** 由 Mingsen Zhang 要求，在任何 M3 结果产生之前提交。
+  - **只用验证集（2023→2024，data_a2_apionly / A4 方案 a，303 个正例）。** 数字取自已有文件 `out_1c_a4/within_val_scores.json`（A5 的组内指标：每个正例在自己的 101 个候选中排序，并列按期望秩），未读取任何测试标签，未新算测试数。
+  - 候选（protocol §7 M2 的四个启发式），验证集组内 AUC（全部新边）：
+
+    | 启发式 | 组内 AUC | 组内 MRR |
+    |---|---|---|
+    | CN | 0.54109 | 0.0948 |
+    | AA | 0.54112 | 0.0961 |
+    | Jaccard | 0.54109 | 0.0960 |
+    | **PA** | **0.55193** | 0.0929 |
+  - **选定：PA（preferential attachment）。** 它是 S2（M3 − 最强启发式）的比较对象，测试时使用其冻结分数（`out_1c_a4/test_scores.csv` 中 PA 列，A4 数据）。
+  - **并列规则：** 组内 AUC 差 < 1e-4 视为并列，依次按验证集组内 MRR、再按验证池化 AP 取高者。此处 PA 领先约 0.011，未触发并列规则。
+  - **说明：** 原 §5 按验证 AP 选出的是 Jaccard（用于此前的 S1 报告）；本修订按 protocol_confirm.md 的主指标改为组内 AUC，只用于 S2。此选择是在已看过 2024→2025 测试结果之后作出的（Stage 1C 报告已提及 PA 在验证组内 AUC 更高），因此 S2 结果是**探索性**的。
+  - **M3 配置选择准则（预先写明）：** 按 protocol_confirm.md，M3 超参数按 5 个种子的平均验证组内 AUC 选择；§7 的验证 AP 同时记录但不用于选择。早停仍按 §7 原文用验证 AP（patience 20）。测试只评估一次，测试分数为 5 个种子预测的平均。
