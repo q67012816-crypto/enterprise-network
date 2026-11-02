@@ -1,0 +1,104 @@
+{
+ "train_late_candidate": {
+  "targets": 80,
+  "with_version_by_C": 79,
+  "asof_core_recovered(assets & operating_income)": 78,
+  "asof_label_recovered(operating_income)": 78,
+  "assets": {
+   "compared": 78,
+   "asof_differs_from_final": 25,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "liabilities": {
+   "compared": 78,
+   "asof_differs_from_final": 11,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "equity": {
+   "compared": 78,
+   "asof_differs_from_final": 24,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "capital": {
+   "compared": 78,
+   "asof_differs_from_final": 0,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "revenue": {
+   "compared": 75,
+   "asof_differs_from_final": 5,
+   "parser_check_lastdoc_vs_final_n": 76,
+   "parser_check_agree": 76
+  },
+  "operating_income": {
+   "compared": 78,
+   "asof_differs_from_final": 14,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "net_income": {
+   "compared": 78,
+   "asof_differs_from_final": 27,
+   "parser_check_lastdoc_vs_final_n": 79,
+   "parser_check_agree": 79
+  },
+  "label_flip_operating_loss": 1,
+  "label_compared": 78,
+  "xbrl_versions_distinct_gt1": 50
+ },
+ "validation_314": {
+  "targets": 314,
+  "with_version_by_C": 313,
+  "asof_core_recovered(assets & operating_income)": 303,
+  "asof_label_recovered(operating_income)": 303,
+  "assets": {
+   "compared": 313,
+   "asof_differs_from_final": 11,
+   "parser_check_lastdoc_vs_final_n": 314,
+   "parser_check_agree": 314
+  },
+  "liabilities": {
+   "compared": 313,
+   "asof_differs_from_final": 10,
+   "parser_check_lastdoc_vs_final_n": 314,
+   "parser_check_agree": 314
+  },
+  "equity": {
+   "compared": 313,
+   "asof_differs_from_final": 14,
+   "parser_check_lastdoc_vs_final_n": 314,
+   "parser_check_agree": 314
+  },
+  "capital": {
+   "compared": 312,
+   "asof_differs_from_final": 0,
+   "parser_check_lastdoc_vs_final_n": 313,
+   "parser_check_agree": 313
+  },
+  "revenue": {
+   "compared": 306,
+   "asof_differs_from_final": 5,
+   "parser_check_lastdoc_vs_final_n": 307,
+   "parser_check_agree": 307
+  },
+  "operating_income": {
+   "compared": 303,
+   "asof_differs_from_final": 7,
+   "parser_check_lastdoc_vs_final_n": 304,
+   "parser_check_agree": 304
+  },
+  "net_income": {
+   "compared": 313,
+   "asof_differs_from_final": 14,
+   "parser_check_lastdoc_vs_final_n": 314,
+   "parser_check_agree": 314
+  },
+  "label_flip_operating_loss": 0,
+  "label_compared": 303,
+  "xbrl_versions_distinct_gt1": 101
+ }
+}

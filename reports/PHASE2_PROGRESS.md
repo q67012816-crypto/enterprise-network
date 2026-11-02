@@ -25,3 +25,10 @@
 - invest_panel.py finished in one day (11,986 calls): `data/interim/invest_panel_raw.csv`, 227,810 rows, FY2019–2025. api_status 000 for 227,800 rows, 013 for 10.
 - Firms per year with at least one named investee row (excluding "-"/합계/계): 2019 1,841/2,408; 2020 1,947/2,486; 2021 2,173/2,552; 2022 2,235/2,636; 2023 2,302/2,722; 2024 2,371/2,804; 2025 2,417/2,820.
 - **Decision (Jack, 2026-11-02): the main panel starts at FY2021.** FY2019 and FY2020 are used only as a sensitivity check (lower structured-table coverage, see the 2018–2020 empty-table note above).
+
+## Phase 2B Step 1 — as-of original versions (2026-11-02 KST)
+- versions_index: 394 targets (314 validation FY2024 + 80 late-label train candidates, superset of baseline 14+63), 904 versions; each stored under data/raw/versions/<rcept_no>/ (document.zip + fnlttXbrl.zip, never overwritten).
+- As-filed values: document ACODE cells (FY2024 docs); FY2022/23 docs lack ACONTEXT → fallback to per-rcept_no XBRL instance (CFY{fy}…SeparateMember). On 722 versions with both, doc vs XBRL agree 100% (assets/OI/NI/equity) → XBRL per rcept_no is as-filed.
+- Validation: 313/314 have a version by C (01144028 씨티케이 first filed 20250530 → stays missing); 303 assets+OI recovered; 10 missing OI = financial firms (securities/bank/insurance/holding) using entity-specific income tags (未验证 mapping, left missing). As-of≠final: assets 11, liab 10, equity 14, capital 0, revenue 5, OI 7, NI 14. OI-sign label flips 0/303.
+- Train candidates: 79/80 version by C (01437186 none), 78 recovered; as-of≠final: assets 25, liab 11, equity 24, OI 14, NI 27; label flip 1 (00308896 FY2023); 00923899 FY2023 has version but no OI tag (未验证).
+- Parser check (latest version vs fnlttMultiAcnt final): 100% agree on all compared accounts both groups.
