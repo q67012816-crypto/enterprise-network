@@ -11,3 +11,4 @@ data/interim/
 logs/
 .venv39/
 reruns/repaired-edges/out/*/predictions.csv
+linkpred/out_2_m3/models/

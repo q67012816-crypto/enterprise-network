@@ -1,0 +1,9 @@
+{
+ "selected_config": "h128_l2_lr0.01_do0.3_mlp",
+ "rule": "mean validation within-group AUC over seeds 1-5 (protocol_confirm; A6)",
+ "val": {
+  "val_within_AUC": 0.6926402640264027,
+  "val_AP": 0.040248093524082505
+ },
+ "selected_by_val_AP_for_reference": "h128_l2_lr0.01_do0.3_mlp"
+}
