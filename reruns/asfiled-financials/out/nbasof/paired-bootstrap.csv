@@ -1,0 +1,9 @@
+family,comparison,metric,difference,ci95_low,ci95_high,bootstrap_replicates
+logistic,financial_degree_neighbors minus financial,AP,-0.0018500220759752883,-0.00836794206992566,0.0034364860778231246,500
+logistic,financial_degree_neighbors minus financial,ROC_AUC,-0.000980327180744811,-0.004192176848867543,0.0018716228686363682,500
+logistic,financial_degree_neighbors minus financial_degree,AP,-0.0022567278216173436,-0.008662058026643653,0.003256080153598551,500
+logistic,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0010861841063649624,-0.0039026313514289313,0.0017409443656950145,500
+hist_gradient_boosting,financial_degree_neighbors minus financial,AP,-0.008554748825601033,-0.015464686027248759,-0.0019790313517149744,500
+hist_gradient_boosting,financial_degree_neighbors minus financial,ROC_AUC,-0.003936957138070629,-0.008387307156405616,0.0001670332393880257,500
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,AP,-0.009011140761342129,-0.01648567738120484,-0.0019368965718781887,500
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.003828338727434044,-0.00709874685655098,-0.0005520677497993437,500

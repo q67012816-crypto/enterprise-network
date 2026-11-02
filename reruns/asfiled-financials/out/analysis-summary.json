@@ -1,0 +1,18 @@
+{
+ "newly_connected": 113,
+ "groups": {
+  "connected_missing_nbr_fin": 388,
+  "isolated": 956,
+  "connected_all_nbr_fin": 849
+ },
+ "original_test_connected_no_nbr_fin": 53,
+ "original_test_connected_some_nbr_missing": 238,
+ "r2024doc_test_connected_no_nbr_fin": 114,
+ "r2024doc_test_connected_some_nbr_missing": 388,
+ "main_test_connected_no_nbr_fin": 114,
+ "main_test_connected_some_nbr_missing": 388,
+ "nbasof_test_connected_no_nbr_fin": 41,
+ "nbasof_test_connected_some_nbr_missing": 164,
+ "main_vs_r2024doc_test_neighbor_feature_cells_changed": 0,
+ "nbasof_vs_r2024doc_test_rows_neighbor_features_changed": 277
+}
