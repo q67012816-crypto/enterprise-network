@@ -102,3 +102,10 @@ Registered on 2026-11-03 (KST). Committed before any dataset statistics were bui
   - Name resolution can fail, which produces missing edges.
   - The 2024 doc-verified edges make the 2024 graph and labels denser than the other years. In particular, validation 2023→24 positives include verified edges that the API-only 2023 graph may have missed; H_2023, which includes rule A, partly mitigates this.
   - Results are association only and say nothing causal.
+
+## Amendments
+- **2026-11-03 (KST), A1.** This clarification fills a gap the protocol left open. It was written after the dataset counts were built and **before any model was fitted or scored**.
+  - **Model fitting.** M1 and M1+scores are fitted on the train pairs (2021→22 and 2022→23) only. The model chosen on validation is applied to test as is, with no refit on train+validation.
+  - **Ties in the ranking metrics.** These use the expected rank under random tie-breaking: rank = #higher + (#tied + 1)/2. A hit at k means this rank is ≤ k.
+  - **Group AP.** Computed on all pairs whose own group label (negatives included) is in that group.
+  - **Data limitation found while building.** In FY2019–2020, about half of the investee names carry a (상장)/(비상장)-type prefix that the existing resolver does not strip. As a result, G_2019 and G_2020 have only 233 and 265 edges, against 1,192 for 2021. This weakens H_t (the "never appeared before" check) for 2019–2020 history. The resolver was left unchanged, as the protocol requires, and the issue is recorded as **未验证**.
