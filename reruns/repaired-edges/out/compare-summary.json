@@ -1,0 +1,15 @@
+{
+ "r2024doc_nodes_degree_changed_2021": 0,
+ "r2024doc_nodes_degree_changed_2022": 0,
+ "r2024doc_nodes_degree_changed_2023": 0,
+ "r2024doc_nodes_degree_changed_2024": 423,
+ "rall_api_nodes_degree_changed_2021": 333,
+ "rall_api_nodes_degree_changed_2022": 191,
+ "rall_api_nodes_degree_changed_2023": 141,
+ "rall_api_nodes_degree_changed_2024": 416,
+ "rall_api_2024_added": 356,
+ "doc_pairs": 361,
+ "overlap": 354,
+ "api_only": 2,
+ "doc_only": 7
+}

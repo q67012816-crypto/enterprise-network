@@ -9,3 +9,5 @@ __pycache__/
 data/interim/
 .venv/
 logs/
+.venv39/
+reruns/repaired-edges/out/*/predictions.csv

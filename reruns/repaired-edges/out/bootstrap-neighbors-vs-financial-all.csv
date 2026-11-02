@@ -1,0 +1,25 @@
+family,comparison,metric,difference,ci95_low,ci95_high,bootstrap_replicates,variant
+logistic,financial_degree_neighbors minus financial,AP,0.000488308625492,-0.0043334173692573,0.0045687018819592,500,original
+logistic,financial_degree_neighbors minus financial,ROC_AUC,-0.0008256840198385,-0.0039391319934018,0.0021305146487026,500,original
+logistic,financial_degree_neighbors minus financial_degree,AP,0.0004992285807879,-0.0043508876629276,0.0049102217361432,500,original
+logistic,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0005918782884684,-0.003606234756465,0.0020588101960843,500,original
+hist_gradient_boosting,financial_degree_neighbors minus financial,AP,-0.0044778965332138,-0.0112576214046141,0.0028224549141004,500,original
+hist_gradient_boosting,financial_degree_neighbors minus financial,ROC_AUC,-0.0032962926143162,-0.0069909293682506,0.0004950900827374,500,original
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,AP,-0.0045659848539879,-0.0110353435215091,0.0015676362600162,500,original
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0027578030361607,-0.0061181923545478,0.0006725204518804,500,original
+logistic,financial_degree_neighbors minus financial,AP,-0.0019447010770335,-0.0078833829093427,0.0031364119936432,500,r2024doc
+logistic,financial_degree_neighbors minus financial,ROC_AUC,-0.0020315324769049,-0.0052206198680559,0.0010563896085396,500,r2024doc
+logistic,financial_degree_neighbors minus financial_degree,AP,-0.0021189329539266,-0.0074123166309706,0.0028717976728823,500,r2024doc
+logistic,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0018529564458584,-0.0048944909650253,0.0009441611588543,500,r2024doc
+hist_gradient_boosting,financial_degree_neighbors minus financial,AP,-0.0063113923963279,-0.014261303071625,0.0016041660987761,500,r2024doc
+hist_gradient_boosting,financial_degree_neighbors minus financial,ROC_AUC,-0.002784497391317,-0.0064148033059516,0.0009125416329863,500,r2024doc
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,AP,-0.0058017195840535,-0.0129743499646425,0.0013862067347136,500,r2024doc
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0022193134580051,-0.0057365348463861,0.0013176488029608,500,r2024doc
+logistic,financial_degree_neighbors minus financial,AP,-0.0023915677528454,-0.0083465692067862,0.0027870833078367,500,rall_api
+logistic,financial_degree_neighbors minus financial,ROC_AUC,-0.0022855890983934,-0.0056124012834951,0.0008470513034487,500,rall_api
+logistic,financial_degree_neighbors minus financial_degree,AP,-0.0022765767666932,-0.007721602151971,0.0028313794179694,500,rall_api
+logistic,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0019726207965595,-0.0052605693309816,0.0009046223517256,500,rall_api
+hist_gradient_boosting,financial_degree_neighbors minus financial,AP,-0.0070995975769819,-0.0140091453647811,0.0011506750833446,500,rall_api
+hist_gradient_boosting,financial_degree_neighbors minus financial,ROC_AUC,-0.003481772357903,-0.0071082222037775,0.0004094478889313,500,rall_api
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,AP,-0.0074531124769039,-0.0143580343439439,-0.0002833340952779,500,rall_api
+hist_gradient_boosting,financial_degree_neighbors minus financial_degree,ROC_AUC,-0.0025723232925737,-0.0061193366727452,0.0011683906942098,500,rall_api

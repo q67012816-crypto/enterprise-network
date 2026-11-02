@@ -1,0 +1,10 @@
+variant,split,n,isolated,connected,connected_no_neighbor_financials,rows_degree_changed_vs_original
+original,train,3607,1909,1698,181,0
+original,validation,2071,1015,1056,35,0
+original,test,2193,1069,1124,53,0
+r2024doc,train,3607,1909,1698,181,0
+r2024doc,validation,2071,1015,1056,35,0
+r2024doc,test,2193,956,1237,114,270
+rall_api,train,3607,1809,1798,281,223
+rall_api,validation,2071,991,1080,59,75
+rall_api,test,2193,955,1238,116,266
