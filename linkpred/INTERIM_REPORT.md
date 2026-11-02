@@ -80,3 +80,8 @@ The protocol is in `protocol.md` (commit 285f96a) and amendment A1 was added in 
 6. **Absolute AP is very low** (base rate about 1%). Only 333 test positives spread over 133 investors give wide intervals.
 
 Reproduce: `../.venv/bin/python src/build_data.py`; `../reruns/repaired-edges/.venv39/bin/python src/models.py` (validation). `--test` has already been run once, and the script refuses to run it again.
+
+## 更正（2026-11-03 KST，Stage 1B）
+- The yearly edge counts in the 数据 table above (1,192 … 1,919) are **total** strict as-of directed edges per year, not first-appearance edges. My earlier summary called them "edges per year", which was ambiguous.
+- The first-appearance undirected edges and the sample flow are in `../reports/LINK_STAGE1B.md`.
+- The results in this report predate the A2 and A3 fixes. See Stage 1B for the repaired numbers.

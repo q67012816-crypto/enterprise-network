@@ -109,3 +109,20 @@ Registered on 2026-11-03 (KST). Committed before any dataset statistics were bui
   - **Ties in the ranking metrics.** These use the expected rank under random tie-breaking: rank = #higher + (#tied + 1)/2. A hit at k means this rank is ≤ k.
   - **Group AP.** Computed on all pairs whose own group label (negatives included) is in that group.
   - **Data limitation found while building.** In FY2019–2020, about half of the investee names carry a (상장)/(비상장)-type prefix that the existing resolver does not strip. As a result, G_2019 and G_2020 have only 233 and 265 edges, against 1,192 for 2021. This weakens H_t (the "never appeared before" check) for 2019–2020 history. The resolver was left unchanged, as the protocol requires, and the issue is recorded as **未验证**.
+- **2026-11-03 (KST), A2: investee-name prefix/suffix normalisation.**
+  - **Reason.** In FY2019–2020, about 47% of the investee names (`inv_prm`) end in a listing-status tag, e.g. `(비상장)` (7,932 rows in 2019) or `(상장)` (1,063), so they could not be resolved. Many later-year names carry the same tags or footnote markers.
+  - **Rule (`src/build_v2.py::a2`).** Strip trailing tokens repeatedly, but only when a token *exactly* matches one of the following, then pass the name to the unchanged exact / norm / stock-name resolver. A unique match is still required, an ambiguous match is still rejected, and there is no fuzzy matching.
+    - In round brackets: `(비상장)`, `(상장)`, `(시장성)`, `(비시장성)`, `(해외비상장)`, `(해외 비상장)`, `(해외상장)`, `(해외 상장)`, `(*)`, `(**)`, `(*N)`, `(주N)`.
+    - In square brackets: `[비상장]`, `[상장]`, `[해외 비상장]`, `[해외 상장]`.
+    - N stands for digits. `(주)` (주식회사) is still handled by the existing normaliser.
+  - **Strict as-of directed edges per year, before → after:** 2019 233→835; 2020 265→944; 2021 1192→1324; 2022 1480→1628; 2023 1663→1848; 2024 1932→2110 (including the doc-verified additions; 1650→1828 without them); 2025 1919→2105.
+  - **Affected:** every graph G_t, every history set H_t, all positives and negatives, and every M0–M2 result. The old files are kept in `data/`, with results in `out/`. The new files are in `data_a2/`, with results in `out_1b/`.
+  - **Interpretation.** The 2024→2025 test was already viewed before this fix, so every test number after A2 is **exploratory**.
+- **2026-11-03 (KST), A3: as-of industry and market.**
+  - **Finding.** Historical values cannot be obtained from the cached data or the DART API.
+    - `company.json` returns only current values.
+    - The `corp_cls` field in `filings_A001.csv` (2,611 firms) and in `invest_panel_raw.csv` never changes within a firm, which shows it is a current snapshot.
+    - There is no cached source for a historical `induty_code`.
+    - The original documents cover mainly FY2024 (3,193 of 3,376), which is not enough.
+    - No API calls were made.
+  - **Rule.** The main analysis keeps the current values, labelled "current value (not as-of, 未验证)". As a sensitivity analysis, M1 and M1+scores are run with industry and market removed (`out_1b_noindmkt/`). M0 same-industry and same-market necessarily still use the current values.

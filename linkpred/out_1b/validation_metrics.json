@@ -1,0 +1,116 @@
+{
+ "val_metrics": {
+  "all": {
+   "M0_random": {
+    "AP": 0.010190645671874785,
+    "AUC": 0.4917299740075614
+   },
+   "M0_same_industry": {
+    "AP": 0.01623548987513676,
+    "AUC": 0.5764673913043479
+   },
+   "M0_same_market": {
+    "AP": 0.013157378571578001,
+    "AUC": 0.6094701086956522
+   },
+   "CN": {
+    "AP": 0.02260307223985657,
+    "AUC": 0.5414279226724953
+   },
+   "AA": {
+    "AP": 0.036241778022821365,
+    "AUC": 0.5415396827741021
+   },
+   "Jaccard": {
+    "AP": 0.03619319284944509,
+    "AUC": 0.5415126934664461
+   },
+   "PA": {
+    "AP": 0.01648937889849174,
+    "AUC": 0.5398495835302457
+   },
+   "M1": {
+    "AP": 0.036568746646718615,
+    "AUC": 0.667183327918242
+   },
+   "M1+scores": {
+    "AP": 0.06066051718264348,
+    "AUC": 0.6744706255907372
+   }
+  }
+ },
+ "val_ranking": {
+  "M0_random": {
+   "Hits10": 0.004,
+   "Hits50": 0.032,
+   "MRR": 0.003680887460182829,
+   "filtered_RR_per_positive": 0.002887289309742555,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "M0_same_industry": {
+   "Hits10": 0.016,
+   "Hits50": 0.064,
+   "MRR": 0.008721554500625466,
+   "filtered_RR_per_positive": 0.007135717402354252,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "M0_same_market": {
+   "Hits10": 0.0,
+   "Hits50": 0.0,
+   "MRR": 0.001562255182571537,
+   "filtered_RR_per_positive": 0.0015010866051118504,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "CN": {
+   "Hits10": 0.068,
+   "Hits50": 0.096,
+   "MRR": 0.03995880480663243,
+   "filtered_RR_per_positive": 0.04878398741064379,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "AA": {
+   "Hits10": 0.08,
+   "Hits50": 0.104,
+   "MRR": 0.045125183822709684,
+   "filtered_RR_per_positive": 0.05267425381912851,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "Jaccard": {
+   "Hits10": 0.072,
+   "Hits50": 0.088,
+   "MRR": 0.04334442796815631,
+   "filtered_RR_per_positive": 0.050418791027867844,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "PA": {
+   "Hits10": 0.04,
+   "Hits50": 0.104,
+   "MRR": 0.022720729386283587,
+   "filtered_RR_per_positive": 0.02724729954147801,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "M1": {
+   "Hits10": 0.06,
+   "Hits50": 0.12,
+   "MRR": 0.030385258008871048,
+   "filtered_RR_per_positive": 0.03385190715957935,
+   "n_investors": 250,
+   "n_candidates": 661585
+  },
+  "M1+scores": {
+   "Hits10": 0.096,
+   "Hits50": 0.18,
+   "MRR": 0.0595947517143844,
+   "filtered_RR_per_positive": 0.06964668926345288,
+   "n_investors": 250,
+   "n_candidates": 661585
+  }
+ }
+}
