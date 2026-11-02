@@ -126,7 +126,8 @@ X['subset_nonfin_ge5'] = (~X.investor_financial) & X.pair_id.map(pos_pct).ge(5)
 degs = {t: collections.Counter(n for p in und(G[t]) for n in p) for t in range(2021, 2025)}
 da = np.array([degs[t][a_] for t, a_ in zip(X.fy, X.anchor)]); do = np.array([degs[t][o_] for t, o_ in zip(X.fy, X.other)])
 X['group'] = np.where((da > 0) & (do > 0), 'both_connected', np.where((da > 0) | (do > 0), 'one_isolated', 'both_isolated'))
-X['label_doc_only'] = [int(lbl == 1 and frozenset((a_, o_)) in DOCONLY) for lbl, a_, o_ in zip(X.label, X.anchor, X.other)]
+# also_in_2024_doc_set: pair is also in the 2024 doc-recovered set; does NOT by itself mean label contamination
+X['also_in_2024_doc_set'] = [int(lbl == 1 and frozenset((a_, o_)) in DOCONLY) for lbl, a_, o_ in zip(X.label, X.anchor, X.other)]
 X.to_csv(D / 'pairs.csv', index=False)
 FL = pd.DataFrame(flow); pp = X[X.label.eq(1)]
 FL['pos_investor_financial'] = pp.groupby('fy').investor_financial.sum().values; FL['pos_investor_nonfin_ge5'] = pp.groupby('fy').subset_nonfin_ge5.sum().values

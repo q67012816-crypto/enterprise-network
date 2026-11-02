@@ -120,6 +120,9 @@ if __name__ == '__main__':
     pd.DataFrame([dict(k=k, v=v) for k, v in chk.items()]).to_csv(O / 'unit_checks.csv', index=False)
     valm = {'all': metrics(evalset(va, 'v'), va)}
     json.dump(dict(val_metrics=valm, val_ranking=rank_metrics(2023, va)), open(O / 'validation_metrics.json', 'w'), indent=1, default=float)
+    Vd = X[va].copy()
+    for k, f in S.items(): Vd[k] = f(Z[va])
+    Vd.to_csv(O / 'val_scores.csv', index=False)
     if not ARGS.test: sys.exit(0)
     # ===== TEST: evaluated once =====
     pass  # exploratory rerun (test already viewed in interim)

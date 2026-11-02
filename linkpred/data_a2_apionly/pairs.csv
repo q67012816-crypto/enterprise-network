@@ -1,4 +1,4 @@
-pair_id,fy,split,anchor,other,label,pct,directions,investor_financial,subset_nonfin_ge5,group,label_doc_only
+pair_id,fy,split,anchor,other,label,pct,directions,investor_financial,subset_nonfin_ge5,group,also_in_2024_doc_set
 2021-00101628-00146861,2021,train,00101628,00146861,1,,00101628>00146861,False,False,one_isolated,0
 2021-00101628-00146861,2021,train,00101628,00103006,0,,,False,False,both_connected,0
 2021-00101628-00146861,2021,train,00101628,00103635,0,,,False,False,both_connected,0

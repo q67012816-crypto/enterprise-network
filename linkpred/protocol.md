@@ -126,3 +126,13 @@ Registered on 2026-11-03 (KST). Committed before any dataset statistics were bui
     - The original documents cover mainly FY2024 (3,193 of 3,376), which is not enough.
     - No API calls were made.
   - **Rule.** The main analysis keeps the current values, labelled "current value (not as-of, 未验证)". As a sensitivity analysis, M1 and M1+scores are run with industry and market removed (`out_1b_noindmkt/`). M0 same-industry and same-market necessarily still use the current values.
+- **2026-11-03 (KST), A4: graph construction made consistent across years (option (a)).**
+  - **Reason.** Link prediction needs every year's graph to be built the same way. Only 2024 had document recovery, which made 2024 denser than the other years, and 65 of the 368 validation positives were edges that existed only in the document-recovered set.
+  - **Rule.** Every year (2019–2025) uses API rules only, with no document recovery. The A2 name rule and the A3 industry/market handling (current values) are kept. Data: `data_a2_apionly/`. Results: `out_1c_a4/`.
+  - **Interpretation.** A4 was decided **after viewing** the earlier 2024→2025 test results (the interim run and Stage 1B), so all test results after A4 are **exploratory**.
+  - The protocol's model-selection rule (validation AP) and grids are unchanged.
+- **2026-11-03 (KST), A5: post-hoc within-candidate-set metrics (reported only; does not change this protocol's primary metric).**
+  - **Metrics.** Each positive is ranked among its own 101 candidates (1 positive + its 100 negatives), with ties by expected rank as in A1. Reported: within-set AUC, MRR and Hits@10, each with a 1000-resample paired bootstrap clustered by investor.
+  - **Post-hoc.** These metrics were added **after viewing** the 2024→2025 test results.
+- **Naming note.** This original text uses "Jack" in several places, and it is not edited. "Jack" and Mingsen Zhang are the same person. The confirmatory protocol `protocol_confirm.md` uses Mingsen Zhang.
+- **Column note.** The `label_doc_only` column produced by `build_v2.py` has been renamed `also_in_2024_doc_set`. It only marks that a pair is also in the 2024 document-recovered set; it **does not** by itself mean the label is contaminated.
