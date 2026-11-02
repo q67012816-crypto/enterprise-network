@@ -20,3 +20,8 @@
 - fnlttMultiAcnt FY2018–2025 has been fetched (`data/interim/fin_multi_raw.csv`, 236 calls). Coverage is in `reports/fin_coverage.json`. OFS covers 2,006/2,305 (87%) in 2018, rising to 2,764/2,820 (98%) in 2025; CFS covers 70–78%.
   Decision: **OFS is the main specification** (ownership edges are parent-level investments, and OFS covers more firms); CFS is a sensitivity check. Interest expense is not in fnlttMultiAcnt; the reason for the ~300 uncovered firms per year in 2018–2022 (financial firms? no XBRL?) is 未验证.
 - invest_panel.py is running in the background (logs/invest_panel.log): otrCprInvstmntSttus for FY2023→2019, then 2024 and 2025 for formerly listed firms. Estimate: about 14k calls. It stops cleanly when today's budget (18,000) runs out; rerun the same command after 00:00 KST tomorrow to resume.
+
+## 2026-11-02 Investment panel fetch complete + sample decision
+- invest_panel.py finished in one day (11,986 calls): `data/interim/invest_panel_raw.csv`, 227,810 rows, FY2019–2025. api_status 000 for 227,800 rows, 013 for 10.
+- Firms per year with at least one named investee row (excluding "-"/합계/계): 2019 1,841/2,408; 2020 1,947/2,486; 2021 2,173/2,552; 2022 2,235/2,636; 2023 2,302/2,722; 2024 2,371/2,804; 2025 2,417/2,820.
+- **Decision (Jack, 2026-11-02): the main panel starts at FY2021.** FY2019 and FY2020 are used only as a sensitivity check (lower structured-table coverage, see the 2018–2020 empty-table note above).
