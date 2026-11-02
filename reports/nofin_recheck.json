@@ -1,0 +1,13 @@
+{
+ "firms": 53,
+ "neighbor_links": 56,
+ "neighbors_with_asof_assets": 24,
+ "firms_with_any_neighbor_asof_fin": 24,
+ "neighbor_status": {
+  "ok": 44,
+  "no_original_by_C": 12
+ },
+ "neighbors_no_assets_flags": {
+  "": 32
+ }
+}

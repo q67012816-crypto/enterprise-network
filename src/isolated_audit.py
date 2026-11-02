@@ -19,6 +19,25 @@ def build_names(O, codes, extra=None):
             if v: names[k][v].add(r['corp_code'])
     return names
 
+def verified_former(codes, C=C):
+    """Former names from data/processed/name_history.csv, effective-dated & chained to the firm's OWN filed name:
+    a '상호의 변경' (before, after) row of corp X is accepted only if `after` equals (normalised) a COMPANY-NAME X filed
+    itself, or an already-accepted name (iterated). Rows from filings after C are ignored. Rejects subsidiary rename tables."""
+    p = R / 'data/processed/name_history.csv'; out = collections.defaultdict(set)
+    if not p.exists(): return out, False
+    H = read(p); H = H[H.corp_code.isin(codes) & H.source_verified.eq('Y') & H.rcept_no.str[:8].le(C)]
+    own = {k: set(map(norm, g.name)) for k, g in H[H.source.eq('COMPANY-NAME as filed')].groupby('corp_code')}
+    kb = ['corp_code', 'rcept_no', 'change_date']
+    P = H[H.source.str.endswith('before')][kb + ['name']].merge(H[H.source.str.endswith('after')][kb + ['name']], on=kb, suffixes=('_b', '_a'))
+    pairs = list(zip(P.corp_code, P.name_b, P.name_a))
+    acc = {k: set(v) for k, v in own.items()}
+    for _ in range(5):
+        for k, b, a in pairs:
+            if norm(a) in acc.get(k, set()) and norm(b): acc.setdefault(k, set()).add(norm(b))
+    for k, v in acc.items():
+        for n in v: out[n].add(k)
+    return out, True
+
 def resolve(names, v):
     for k, n in [('exact', v.strip()), ('norm', norm(v)), ('stock', norm(v))]:
         c = names[k].get(n, set())
@@ -51,16 +70,12 @@ def main():
     iso = T[T.degree.eq('0')].corp_code.tolist(); nofin = T[T.degree.ne('0') & T.neighbor_financial_count.eq('0')].corp_code.tolist()
     deg = collections.Counter(list(E.src_corp_code) + list(E.target))
     # name history (rule ii): former names effective before C, unique, of universe firms
-    nh_path = R / 'data/processed/name_history.csv'; former = collections.defaultdict(set)
-    if nh_path.exists():
-        for r in read(nh_path).to_dict('records'):
-            if r['corp_code'] in codes and r['name_effective_from'] <= C and r['name'] and r['source_verified'] == 'Y':
-                former[norm(r['name'])].add(r['corp_code'])
+    former, nh_used = verified_former(codes); cur = set(names['norm'])
     unmatched = V[V.rule.isin(['unmatched', 'ambiguous']) & ~V.placeholder]
     rename_hits = collections.defaultdict(list)
     for r in unmatched.to_dict('records'):
         c = former.get(norm(r['inv_prm']), set())
-        if len(c) == 1:
+        if len(c) == 1 and norm(r['inv_prm']) not in cur:
             t = next(iter(c))
             if t != r['src_corp_code'] and t in observed and r['src_corp_code'] in observed and r['held'] and r['disclosure'] and r['disclosure'] <= C:
                 for k in (t, r['src_corp_code']): rename_hits[k].append(f"{r['src_corp_code']}->{t} via former name '{r['inv_prm']}' ({r['rcept_no']})")
@@ -90,7 +105,7 @@ def main():
     out = pd.DataFrame(rows); out.to_csv(R / 'data/processed/isolated_audit.csv', index=False)
     summ = {'baseline_graph_reproduced': same, 'edges_reproduced': len(E), 'edges_baseline': len(base),
             'isolated_test': len(iso), 'isolated_with_degree_in_reproduced_graph': sum(deg[k] > 0 for k in iso),
-            'name_history_used': nh_path.exists(), 'categories': out.category.value_counts().to_dict(),
+            'name_history_used': nh_used, 'categories': out.category.value_counts().to_dict(),
             'connected_no_fin_neighbor': len(nofin)}
     json.dump(summ, open(R / 'reports/isolated_audit.json', 'w'), indent=1, ensure_ascii=False); print(json.dumps(summ, ensure_ascii=False, indent=1))
     return V, E, observed, iso, nofin

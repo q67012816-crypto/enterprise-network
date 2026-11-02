@@ -32,3 +32,10 @@
 - Validation: 313/314 have a version by C (01144028 씨티케이 first filed 20250530 → stays missing); 303 assets+OI recovered; 10 missing OI = financial firms (securities/bank/insurance/holding) using entity-specific income tags (未验证 mapping, left missing). As-of≠final: assets 11, liab 10, equity 14, capital 0, revenue 5, OI 7, NI 14. OI-sign label flips 0/303.
 - Train candidates: 79/80 version by C (01437186 none), 78 recovered; as-of≠final: assets 25, liab 11, equity 24, OI 14, NI 27; label flip 1 (00308896 FY2023); 00923899 FY2023 has version but no OI tag (未验证).
 - Parser check (latest version vs fnlttMultiAcnt final): 100% agree on all compared accounts both groups.
+
+## Phase 2B Step 2 — isolated audit (2026-11-02 KST)
+- fetch_docs: original FY2024(.12) 사업보고서 document (first non-correction filing ≤C) for 2,745 of 3,270 firms (rest: no Dec-FYE original by C). Calls today 16,298/18,000.
+- Baseline FY2024 graph reproduced exactly (1,570 edges; 1,069 isolated all degree 0).
+- Doc-based categories (data/processed/isolated_audit.csv): iii_external_unlisted 670, iv_filing_lists_no_relation 211, iii_listed_unmatched_未验证 75, ii_name_match_failed 58, i_api_table_incomplete 55 (mostly API returns a correction filed after C), i_doc_not_obtained 0.
+- 361 universe edges in as-filed originals but not in baseline graph (data/processed/doc_recovered_edges_2024.csv): 242 API row belongs to a correction filed after C (baseline timing filter dropped a relation already in the original); 97 investee named by its as-filed former name (verified rename chain); 22 absent from API table; 3 no API rows; 1 other. 113 isolated firms would gain ≥1 edge. NOT added to any graph.
+- 53 no-financial-neighbour firms: 56 neighbour links; 24 now have as-of assets (document or XBRL of the original). Rest: 12 neighbours non-December FYE (no 2024.12 original), ~17 non-XBRL filers (fnlttXbrl status 014, untagged tables not parsed), 3 financial firms (entity-specific tags).

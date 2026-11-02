@@ -4,11 +4,27 @@
  "edges_baseline": 1570,
  "isolated_test": 1069,
  "isolated_with_degree_in_reproduced_graph": 0,
- "name_history_used": false,
+ "name_history_used": true,
  "categories": {
-  "iii_external_unmatched": 821,
-  "i_or_iv_placeholder_only": 223,
-  "iii_external_or_filtered": 25
+  "iii_external_unmatched": 775,
+  "i_or_iv_placeholder_only": 219,
+  "ii_name_match_failed": 51,
+  "iii_external_or_filtered": 24
  },
- "connected_no_fin_neighbor": 53
+ "connected_no_fin_neighbor": 53,
+ "categories_doc": {
+  "iii_external_unlisted": 670,
+  "iv_filing_lists_no_relation": 211,
+  "iii_listed_unmatched_未验证": 75,
+  "ii_name_match_failed": 58,
+  "i_api_table_incomplete": 55
+ },
+ "doc_new_edges_total": 365,
+ "doc_new_edges_by_rule": {
+  "norm": 175,
+  "former_name": 97,
+  "exact": 74,
+  "stock": 19
+ },
+ "doc_new_edges_touching_isolated": 138
 }
