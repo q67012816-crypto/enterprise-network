@@ -54,6 +54,7 @@ for t in range(2019, 2026):
     H[t] = {frozenset(p) for p in hist_dir}
     log.append(dict(fy=t, C=c, eligible=len(elig[t]), strict_directed=len(ed), doc_added=nd, history_undirected_cum=len(H[t])))
 pd.DataFrame(log).to_csv(D / 'graph_years.csv', index=False)
+pd.DataFrame([dict(fy=t, corp_code=c) for t in elig for c in sorted(elig[t])]).to_csv(D / 'eligible.csv', index=False)
 # node attributes
 F = read(P / 'data/interim/fin_multi_raw.csv'); F = F[F.fs_div.eq('OFS')]; F['disc'] = F.rcept_no.map(fil.rcept_dt)
 fd = F.groupby(['corp_code', 'bsns_year']).disc.max()
