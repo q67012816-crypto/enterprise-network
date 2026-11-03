@@ -1,0 +1,11 @@
+check,passed
+features_fin_disc_le_C,True
+positives_absent_from_history_Ht,True
+positives_in_next_graph,True
+positives_not_in_feature_graph_Gt,True
+negatives_not_in_Ht_or_Gt1,True
+preexisting_not_positive,True
+preexisting_not_negative,True
+endpoints_eligible_t_and_t1,True
+exactly_100_negatives,True
+every_positive_has_new_evidence,True

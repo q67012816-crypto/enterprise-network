@@ -1,0 +1,148 @@
+{
+ "unit_checks": {
+  "features_fin_disc_le_C": true,
+  "positives_absent_from_history_Ht": true,
+  "positives_in_next_graph": true,
+  "positives_not_in_feature_graph_Gt": true,
+  "negatives_not_in_Ht_or_Gt1": true,
+  "preexisting_not_positive": true,
+  "preexisting_not_negative": true,
+  "endpoints_eligible_t_and_t1": true,
+  "exactly_100_negatives": true,
+  "every_positive_has_new_evidence": true
+ },
+ "counts_v3": [
+  {
+   "fy": 2021,
+   "split": "train",
+   "positives": 196,
+   "both_connected": 118,
+   "one_isolated": 60,
+   "both_isolated": 18,
+   "nonfin_ge5": 30,
+   "financial_investor": 63,
+   "edges_Gt": 1379,
+   "isolated_share_Gt": 0.5483,
+   "flag_acquired_in_year": 4
+  },
+  {
+   "fy": 2022,
+   "split": "train",
+   "positives": 215,
+   "both_connected": 115,
+   "one_isolated": 80,
+   "both_isolated": 20,
+   "nonfin_ge5": 52,
+   "financial_investor": 59,
+   "edges_Gt": 1676,
+   "isolated_share_Gt": 0.4928,
+   "flag_acquired_in_year": 3
+  },
+  {
+   "fy": 2023,
+   "split": "validation",
+   "positives": 164,
+   "both_connected": 94,
+   "one_isolated": 58,
+   "both_isolated": 12,
+   "nonfin_ge5": 45,
+   "financial_investor": 38,
+   "edges_Gt": 1894,
+   "isolated_share_Gt": 0.4553,
+   "flag_acquired_in_year": 9
+  },
+  {
+   "fy": 2024,
+   "split": "test",
+   "positives": 285,
+   "both_connected": 207,
+   "one_isolated": 65,
+   "both_isolated": 13,
+   "nonfin_ge5": 31,
+   "financial_investor": 132,
+   "edges_Gt": 1772,
+   "isolated_share_Gt": 0.4752,
+   "flag_acquired_in_year": 11
+  }
+ ],
+ "counts_ref": [
+  {
+   "fy": 2021,
+   "split": "train",
+   "positives": 260,
+   "both_connected": 132,
+   "one_isolated": 96,
+   "both_isolated": 32,
+   "nonfin_ge5": 40,
+   "financial_investor": 79,
+   "edges_Gt": 1293,
+   "isolated_share_Gt": 0.5783
+  },
+  {
+   "fy": 2022,
+   "split": "train",
+   "positives": 290,
+   "both_connected": 142,
+   "one_isolated": 113,
+   "both_isolated": 35,
+   "nonfin_ge5": 59,
+   "financial_investor": 81,
+   "edges_Gt": 1576,
+   "isolated_share_Gt": 0.5205
+  },
+  {
+   "fy": 2023,
+   "split": "validation",
+   "positives": 303,
+   "both_connected": 130,
+   "one_isolated": 132,
+   "both_isolated": 41,
+   "nonfin_ge5": 99,
+   "financial_investor": 50,
+   "edges_Gt": 1792,
+   "isolated_share_Gt": 0.4835
+  },
+  {
+   "fy": 2024,
+   "split": "test",
+   "positives": 339,
+   "both_connected": 239,
+   "one_isolated": 84,
+   "both_isolated": 16,
+   "nonfin_ge5": 40,
+   "financial_investor": 141,
+   "edges_Gt": 1762,
+   "isolated_share_Gt": 0.4762
+  }
+ ],
+ "positive_moves": {
+  "2021": {
+   "kept": 180,
+   "new in v3": 16,
+   "now in history/G_t (name fix)": 11,
+   "now preexisting": 69,
+   "other": 0
+  },
+  "2022": {
+   "kept": 201,
+   "new in v3": 14,
+   "now in history/G_t (name fix)": 7,
+   "now preexisting": 81,
+   "other": 1
+  },
+  "2023": {
+   "kept": 163,
+   "new in v3": 1,
+   "now in history/G_t (name fix)": 65,
+   "now preexisting": 75,
+   "other": 0
+  },
+  "2024": {
+   "kept": 283,
+   "new in v3": 2,
+   "now in history/G_t (name fix)": 5,
+   "now preexisting": 51,
+   "other": 0
+  }
+ }
+}
