@@ -53,10 +53,15 @@ class DartClient:
 
     def _load_state(self):
         today = dt.datetime.now(KST).strftime("%Y-%m-%d")
-        try:
-            s = json.loads(self._state_path().read_text())
-        except (FileNotFoundError, json.JSONDecodeError):
-            s = {}
+        s = {}
+        for i in range(50):  # Windows: reading fails while another thread is replacing calls.json
+            try:
+                s = json.loads(self._state_path().read_text()); break
+            except (FileNotFoundError, json.JSONDecodeError):
+                break
+            except PermissionError:
+                if i == 49: raise
+                time.sleep(0.02)
         if s.get("date") != today:
             s = {"date": today, "calls": 0}
         return s
@@ -65,12 +70,27 @@ class DartClient:
         return self._load_state()["calls"]
 
     def _bump(self):
-        import fcntl  # cross-process lock so concurrent scripts don't overwrite the counter
+        # cross-process lock so concurrent scripts don't overwrite the counter (fcntl on POSIX, msvcrt on Windows)
         self.state_dir.mkdir(parents=True, exist_ok=True)
-        with open(self.state_dir / "calls.lock", "w") as lk:
-            fcntl.flock(lk, fcntl.LOCK_EX)
-            s = self._load_state(); s["calls"] += 1
-            tmp = self._state_path().with_suffix(".tmp"); tmp.write_text(json.dumps(s)); tmp.replace(self._state_path())
+        with open(self.state_dir / "calls.lock", "a+") as lk:
+            try:
+                import fcntl; fcntl.flock(lk, fcntl.LOCK_EX); unlock = lambda: None
+            except ImportError:
+                import msvcrt; lk.seek(0)
+                while True:
+                    try: msvcrt.locking(lk.fileno(), msvcrt.LK_LOCK, 1); break
+                    except OSError: time.sleep(0.05)
+                unlock = lambda: (lk.seek(0), msvcrt.locking(lk.fileno(), msvcrt.LK_UNLCK, 1))
+            try:
+                s = self._load_state(); s["calls"] += 1
+                tmp = self._state_path().with_suffix(".tmp"); tmp.write_text(json.dumps(s))
+                for i in range(50):  # Windows: replace fails while another thread is reading calls.json
+                    try: tmp.replace(self._state_path()); break
+                    except PermissionError:
+                        if i == 49: raise
+                        time.sleep(0.02)
+            finally:
+                unlock()
 
     # ---- http ----
     @staticmethod
@@ -111,6 +131,8 @@ class DartClient:
             status = _status(body, ext)
             if status == "020":
                 raise DailyLimitReached("OpenDART status 020 (request limit exceeded)")
+            if status in ("010", "011", "012", "100", "101", "901"):  # key/permission errors: never cache, stop the run
+                raise RuntimeError(f"OpenDART status {status} (API key or permission problem); nothing cached")
             if status in ("800", "900"):
                 err = f"status {status}"; self.sleep(2 ** attempt); continue
             path.parent.mkdir(parents=True, exist_ok=True)

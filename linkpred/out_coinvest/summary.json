@@ -1,0 +1,71 @@
+{
+ "hub_cap": 20,
+ "years": [
+  2021,
+  2022,
+  2023
+ ],
+ "bipartite_2021": {
+  "entities": 17196,
+  "shared_by_2plus": 1722,
+  "over_cap": 14,
+  "size_quantiles": {
+   "0.5": 1.0,
+   "0.9": 2.0,
+   "0.99": 4.0,
+   "1": 57.0
+  }
+ },
+ "isolated_2021_cap20": {
+  "isolated": 1429,
+  "with_coinvest_neighbour": 265,
+  "connected_with_coinvest_neighbour": 568
+ },
+ "isolated_2021_nocap": {
+  "isolated": 1429,
+  "with_coinvest_neighbour": 300,
+  "connected_with_coinvest_neighbour": 594
+ },
+ "bipartite_2022": {
+  "entities": 20343,
+  "shared_by_2plus": 2294,
+  "over_cap": 15,
+  "size_quantiles": {
+   "0.5": 1.0,
+   "0.9": 2.0,
+   "0.99": 4.0,
+   "1": 70.0
+  }
+ },
+ "isolated_2022_cap20": {
+  "isolated": 1331,
+  "with_coinvest_neighbour": 297,
+  "connected_with_coinvest_neighbour": 747
+ },
+ "isolated_2022_nocap": {
+  "isolated": 1331,
+  "with_coinvest_neighbour": 334,
+  "connected_with_coinvest_neighbour": 776
+ },
+ "bipartite_2023": {
+  "entities": 22028,
+  "shared_by_2plus": 2435,
+  "over_cap": 15,
+  "size_quantiles": {
+   "0.5": 1.0,
+   "0.9": 2.0,
+   "0.99": 4.0,
+   "1": 77.0
+  }
+ },
+ "isolated_2023_cap20": {
+  "isolated": 1273,
+  "with_coinvest_neighbour": 337,
+  "connected_with_coinvest_neighbour": 852
+ },
+ "isolated_2023_nocap": {
+  "isolated": 1273,
+  "with_coinvest_neighbour": 367,
+  "connected_with_coinvest_neighbour": 889
+ }
+}
