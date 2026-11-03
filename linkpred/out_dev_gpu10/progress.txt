@@ -1,0 +1,12 @@
+dfgt 0 folds
+dfgt 3/3 folds
+dfgt-nograph 3/3 folds
+sage 3/3 folds
+dfgt+il 3/3 folds
+dfgt+pf 3/3 folds
+dfgt+pf+il 3/3 folds
+dfgt+ile 3/3 folds
+dfgt+ile_in 3/3 folds
+dfgt+ile+pf+il 3/3 folds
+dfgt-nograph+il 3/3 folds
+sage+ile 3/3 folds
