@@ -12,3 +12,9 @@ logs/
 .venv39/
 reruns/repaired-edges/out/*/predictions.csv
 linkpred/out_2_m3/models/
+# dev-stage per-pair scores and derived feature tables (large; regenerate with linkpred/src/paper_dev.py, pair_feats.py, interlock_feats.py)
+linkpred/out_dev*/scores_*.csv
+linkpred/out_dev/pair_feats.csv
+linkpred/out_dev/interlock_feats*.csv
+linkpred/out_dev/interlock_edges.csv
+linkpred/out_paper/val_scores_*.csv
