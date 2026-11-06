@@ -65,7 +65,11 @@ VARIANTS = {   # 名称: (模型, 选项)
     'dcm': ('dcm', dict(rel=True, gate=True, resid=True)), 'dcm-noA': ('dcm', dict(rel=False, gate=True, resid=True)),
     'dcm-noB': ('dcm', dict(rel=True, gate=False, resid=True)), 'dcm-noC': ('dcm', dict(rel=True, gate=True, resid=False)),
     # TNSE 实验 B 的新基线（baselines.py，按论文重写，不是官方实现）；超参数见 base_config_<名>.json（tune-base 命令选出）
-    'gae': ('base', dict(name='gae')), 'coldbrew': ('base', dict(name='coldbrew')), 'degfair': ('base', dict(name='degfair')), 'tailgnn': ('base', dict(name='tailgnn')),
+    'gae': ('base', dict(name='gae')), 'coldbrew': ('base', dict(name='coldbrew')), 'coldbrew2': ('base', dict(name='coldbrew2', cfg_from='coldbrew')),
+    'seal': ('base', dict(name='seal')),   # 第 18.3 节（seal.py，不是官方实现）
+    # 第 18.1 节：训练时的节点级边丢弃（每个训练年 G_t 中比例 q 的度 > 0 节点不参与消息传递，训练正例不变；验证年用完整 G_t）
+    'dfgt-ed10': ('dfgt', dict(target=False, ed=0.1)), 'dfgt-ed30': ('dfgt', dict(target=False, ed=0.3)),
+    'sage-ed10': ('sage', dict(target=False, ed=0.1)), 'sage-ed30': ('sage', dict(target=False, ed=0.3)), 'degfair': ('base', dict(name='degfair')), 'tailgnn': ('base', dict(name='tailgnn')),
     'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
     'dfgt+pf': ('dfgt', dict(target=False, pf=('port', 'ind'))), 'dfgt-nograph+pf': ('dfgt', dict(target=False, aug=False, nograph=True, pf=('port', 'ind'))),
@@ -183,12 +187,20 @@ def run_gnn(X, Ys, tr_years, va_year, model, opt, seed):
     torch.manual_seed(seed); np.random.seed(seed)
     years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}
     if opt.get('nograph'): Ys = {t: dict(Y, edges=[], deg=np.zeros_like(Y['deg'])) for t, Y in Ys.items()}
+    Yp = dict(Ys)   # 用于预计算（消息传递）的节点表；边丢弃只改训练年
+    if opt.get('ed'):
+        for t in tr_years:
+            Y = Ys[t]; rng = np.random.default_rng(20261106 + 100 + seed + 1000 * t); cand = np.where(Y['deg'] > 0)[0]
+            dr = np.zeros(len(Y['deg']), bool); dr[rng.choice(cand, int(round(opt['ed'] * len(cand))), replace=False)] = True
+            e = [(i, j) for i, j in Y['edges'] if not (dr[i] or dr[j])]; d = np.zeros(len(Y['deg']))
+            for i, j in e: d[i] += 1; d[j] += 1
+            Yp[t] = dict(Y, edges=e, deg=d)
     if model == 'sage':
         m = SAGE(xs[va_year].shape[1], 128); lr, lam = 1e-2, 0.
-        Ps = {t: SAGE.prepare(None, Ys[t]) for t in years}
+        Ps = {t: SAGE.prepare(None, Yp[t]) for t in years}
     else:
         km = fit_kmeans(Ys, years=tr_years)
-        Ps = {t: dfgt_prepare_dev(Ys[t], km, zero_k=opt.get('zero_k', 0)) for t in years}
+        Ps = {t: dfgt_prepare_dev(Yp[t], km, zero_k=opt.get('zero_k', 0)) for t in years}
         m = DFGTDev(xs[va_year].shape[1], aug=opt.get('aug', True), use_sim=opt.get('use_sim', True), soft_eval=opt.get('soft_eval', False)); lr, lam = 3e-3, opt.get('lam', 0.1)
     if opt.get('pf'):
         PF = torch.tensor(pf_matrix(X, opt['pf'], tr_years)); m.pf = torch.nn.Linear(PF.shape[1], 1)
@@ -260,39 +272,51 @@ def run_dual(X, Ys, tr_years, va_year, opt, seed, cfg, inputs):
 def run_base(X, Ys, tr_years, va_year, name, seed, cfg):
     """训练一个新基线：与 run_gnn 相同的训练和早停；DegFairGNN 另加公平正则（系数 1），其他模型的辅助损失系数为 1。"""
     torch.manual_seed(seed); np.random.seed(seed)
+    if name == 'seal':
+        from seal import run_seal_kr
+        return run_seal_kr(X, Ys, tr_years, va_year, seed, cfg, fast_auc)
     years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}
     m = BASELINES[name](xs[va_year].shape[1], hid=cfg['hid']); Ps = {t: m.prepare(Ys[t]) for t in years}
     TR, VA = X[X.fy.isin(tr_years)], X[X.fy == va_year]; PI_tr, PI_va = pair_idx(Ys, TR), pair_idx(Ys, VA)
     y = torch.tensor(X.label.values, dtype=torch.float32); ntr = len(TR)
-    opt_ = torch.optim.Adam(m.parameters(), lr=cfg['lr']); best, state, bad = -1, None, 0
     def score():
         m.eval(); s = np.zeros(len(X))
         with torch.no_grad():
             for t, (u, v, ix) in PI_va.items(): h, _ = m.embed(xs[t], Ps[t]); s[ix] = torch.sigmoid(m.dec(h, u, v)).cpu().numpy()
         return s[VA.index]
-    for ep in range(1, 151):
-        m.train(); opt_.zero_grad(); loss = 0.
-        for t, (u, v, ix) in PI_tr.items():
-            h, aux = m.embed(xs[t], Ps[t]); pl = torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, u, v), y[ix], reduction='none')
-            loss = loss + pl.sum() / ntr + aux / len(PI_tr)
-            if name == 'degfair': loss = loss + m.fair_loss(pl, Ps[t], u, v) / len(PI_tr)
-        loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
-        if a > best: best, bad, state = a, 0, s
-        else:
-            bad += 1
-            if bad >= 15: break
-    return state, best
+    def fit(params, kd_only=False):
+        import copy
+        opt_ = torch.optim.Adam(params, lr=cfg['lr']); best, state, bad, sd = -1, None, 0, None
+        for ep in range(1, 151):
+            m.train(); opt_.zero_grad(); loss = 0.
+            for t, (u, v, ix) in PI_tr.items():
+                h, aux = m.embed(xs[t], Ps[t])
+                if kd_only: loss = loss + aux / len(PI_tr); continue
+                pl = torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, u, v), y[ix], reduction='none')
+                loss = loss + pl.sum() / ntr + aux / len(PI_tr)
+                if name == 'degfair': loss = loss + m.fair_loss(pl, Ps[t], u, v) / len(PI_tr)
+            loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
+            if a > best: best, bad, state, sd = a, 0, s, copy.deepcopy(m.state_dict())
+            else:
+                bad += 1
+                if bad >= 15: break
+        m.load_state_dict(sd); return state, best
+    if name == 'coldbrew2':   # 两阶段：先训练教师 + 解码器，再冻结它们只蒸馏学生（第 18.2 节）
+        m.stage = 1; fit(m.stage_params()); m.stage = 2; return fit(m.stage_params(), kd_only=True)
+    return fit(list(m.parameters()))
 
 def tune_base(name):
     """只用 F1、F2 的验证年为一个基线选超参数：BASE_GRID 的 4 个配置 × 3 个种子，按全部组验证 AUC（分数平均后）两折均值选；全部记录。"""
     X, N, G = load(); rows = []
     for f in ('F1', 'F2'):
         tr_years, va_year = FOLDS[f]; Ys = node_tables(N, G, list(tr_years) + [va_year], tr_years, False); VA = X[X.fy == va_year]
-        for k, cfg in enumerate(BASE_GRID):
+        from seal import SEAL_GRID
+        for k, cfg in enumerate(SEAL_GRID if name == 'seal' else BASE_GRID):
             t0 = time.time(); s = np.mean([run_base(X, Ys, tr_years, va_year, name, sd, cfg)[0] for sd in (1, 2, 3)], 0)
             rows.append(dict(model=name, fold=f, cfg=k, **cfg, val_auc=round(fast_auc(VA, s), 4), sec_per_seed=round((time.time() - t0) / 3, 1))); print(rows[-1], flush=True)
     T = pd.DataFrame(rows); T.to_csv(O / f'base_tuning_{name}.csv', index=False); M = T.groupby('cfg').val_auc.mean(); k = int(M.idxmax())
-    json.dump(dict(cfg=BASE_GRID[k], cfg_index=k, mean_val_auc_F1F2=round(float(M.max()), 4)), open(O / f'base_config_{name}.json', 'w'), indent=1); print('selected', name, BASE_GRID[k])
+    from seal import SEAL_GRID; GR = SEAL_GRID if name == 'seal' else BASE_GRID
+    json.dump(dict(cfg=GR[k], cfg_index=k, mean_val_auc_F1F2=round(float(M.max()), 4)), open(O / f'base_config_{name}.json', 'w'), indent=1); print('selected', name, GR[k])
 
 DCM_GRID = [dict(hid=h, lr=lr, drop=d) for h in (64, 128) for lr in (1e-3, 3e-3) for d in (0.1, 0.3)]   # 事先写定的 8 个配置（第 14 节）
 
@@ -332,7 +356,7 @@ def run(variant):
         per = {}
         if model == 'lr': s = run_lr(X, Ys, tr_years, va_year, opt)
         elif model == 'base':
-            cfg = json.load(open(O / f"base_config_{opt['name']}.json"))['cfg']
+            cfg = json.load(open(O / f"base_config_{opt.get('cfg_from', opt['name'])}.json"))['cfg']
             if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
             t0 = time.time(); per = {f'score_s{sd}': run_base(X, Ys, tr_years, va_year, opt['name'], sd, cfg)[0] for sd in SEEDS}; s = np.mean(list(per.values()), 0)
             RT.append(dict(model=variant, fold=f, sec_per_seed=round((time.time() - t0) / len(SEEDS), 2), gpu_mb=round(torch.cuda.max_memory_allocated() / 2 ** 20) if torch.cuda.is_available() else 0))

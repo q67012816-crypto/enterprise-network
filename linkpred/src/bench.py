@@ -143,9 +143,114 @@ def evaluate():
     open(OUT / 'summary.txt', 'w', encoding='utf-8').write('\n'.join(lines) + '\n' + json.dumps(res['verdict'], ensure_ascii=False, indent=1))
     print('\n'.join(lines)); print(json.dumps(res['verdict'], ensure_ascii=False, indent=1))
 
+# ======================= 第 18 节：C1（边丢弃）、C2（新基线）、C3（SEAL） =======================
+C = OUT / 'c'; C.mkdir(exist_ok=True)
+KR_CFG = L / 'out_dev_gpu10'   # 基线配置用韩国数据上选出的（第 18.2 节）
+
+def drop_nodes(n, edges, deg, q, seed):
+    """第 18.1 节：在度 > 0 的节点中抽比例 q（种子 20261106 + 100 + s），删除它们在消息传递图中的全部边。"""
+    rng = np.random.default_rng(SEED_DATA + 100 + seed); cand = np.where(deg > 0)[0]
+    d = np.zeros(n, bool); d[rng.choice(cand, int(round(q * len(cand))), replace=False)] = True
+    e = edges[~(d[edges[:, 0]] | d[edges[:, 1]])]; return e, np.bincount(e.ravel(), minlength=n).astype(float)
+
+def run_model(model, x, edges, deg, TR, VA, TE, seed):
+    """model：sage / dfgt（可带 -ed10、-ed30 后缀）或 baselines.BASELINES 中的名字。返回（测试分数，验证分数，最佳验证 AUC）。"""
+    import copy
+    from paper_models import SAGE, fit_kmeans; from dev_models import DFGTDev, dfgt_prepare_dev; from baselines import BASELINES
+    torch.manual_seed(seed); np.random.seed(seed); n = len(x); xt = torch.tensor(x)
+    base, q = (model.split('-ed')[0], int(model.split('-ed')[1]) / 100) if '-ed' in model else (model, 0.)
+    Yf = dict(ids=list(range(n)), x=x, edges=[tuple(e) for e in edges], deg=deg)
+    if q > 0:
+        e2, d2 = drop_nodes(n, edges, deg, q, seed); Yt = dict(Yf, edges=[tuple(e) for e in e2], deg=d2)
+    else: Yt = Yf
+    lam, fair, two = 0., False, False
+    if base == 'sage':
+        m = SAGE(x.shape[1], 128); prep = lambda Y: SAGE.prepare(None, Y); lr = 1e-2
+    elif base == 'dfgt':
+        km = fit_kmeans({0: Yf}, years=(0,)); m = DFGTDev(x.shape[1], aug=True); prep = lambda Y: dfgt_prepare_dev(Y, km); lr, lam = 3e-3, 0.1
+    else:
+        cfg = json.load(open(KR_CFG / f"base_config_{'coldbrew' if base == 'coldbrew2' else base}.json"))['cfg']
+        m = BASELINES[base](x.shape[1], hid=cfg['hid']); prep = m.prepare; lr, lam, fair, two = cfg['lr'], 1., base == 'degfair', base == 'coldbrew2'
+    Pt = prep(Yt); Pe = Pt if Yt is Yf else prep(Yf)
+    T = lambda D: (torch.tensor(D.anchor.values), torch.tensor(D.other.values))
+    (ut, vt), (uv, vv), (ue, ve) = T(TR), T(VA), T(TE); y = torch.tensor(TR.label.values, dtype=torch.float32)
+    def fit(params, kd_only=False):
+        opt = torch.optim.Adam(params, lr=lr); best, bad, sd, out = -1, 0, None, None
+        for ep in range(150):
+            m.train(); opt.zero_grad(); h, aux = m.embed(xt, Pt)
+            if kd_only: loss = aux
+            else:
+                pl = torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, ut, vt), y, reduction='none'); loss = pl.mean() + lam * aux
+                if fair: loss = loss + m.fair_loss(pl, Pt, ut, vt)
+            loss.backward(); opt.step(); m.eval()
+            with torch.no_grad():
+                h, _ = m.embed(xt, Pe); sv = torch.sigmoid(m.dec(h, uv, vv)).cpu().numpy(); a = fast_auc(VA, sv)
+                if a > best: best, bad, out, sd = a, 0, (torch.sigmoid(m.dec(h, ue, ve)).cpu().numpy(), sv), copy.deepcopy(m.state_dict())
+                else:
+                    bad += 1
+                    if bad >= 15: break
+        m.load_state_dict(sd); return out[0], out[1], best
+    if two:
+        m.stage = 1; fit(m.stage_params()); m.stage = 2; return fit(m.stage_params(), kd_only=True)
+    return fit(list(m.parameters()))
+
+def _upsert(f, row, keys=('data', 'r', 'model')):
+    old = pd.read_csv(f) if f.exists() else pd.DataFrame(columns=list(keys))
+    mask = np.ones(len(old), bool)
+    for k in keys: mask &= (old[k] == row[k]).values
+    pd.concat([old[~mask], pd.DataFrame([row])]).to_csv(f, index=False)
+
+def run_c(data, r, seeds, models):
+    """C1 / C2：每个模型 10 个种子，测试分数写 bench/out/c/<model>_<data>_r<r>.csv；种子平均后的验证 AUC 写 c/val_auc.csv；时间和显存写 c/runtime.csv。"""
+    x, E = load(data); edges, deg, TR, VA, TE = split(len(x), E, r)
+    for model in models:
+        if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
+        t0 = time.time(); err = ''
+        try: res = [run_model(model, x, edges, deg, TR, VA, TE, sd) for sd in range(1, seeds + 1)]
+        except torch.OutOfMemoryError:
+            res = None; err = 'OOM'; torch.cuda.empty_cache()
+        gpu = round(torch.cuda.max_memory_allocated() / 2 ** 20) if torch.cuda.is_available() else 0; sec = round((time.time() - t0) / seeds, 2)
+        _upsert(C / 'runtime.csv', dict(data=data, r=r, model=model, seconds=sec, gpu_mb=gpu, error=err))
+        if res is None:
+            print(data, r, model, 'OOM', flush=True); continue
+        out = TE[['pair_id', 'anchor', 'other', 'label']].copy(); out[model] = np.mean([a for a, _, _ in res], 0)
+        for k, (a, _, _) in enumerate(res, 1): out[f'{model}_s{k}'] = a
+        out.to_csv(C / f'{model}_{data}_r{r:.1f}.csv', index=False)
+        va = fast_auc(VA, np.mean([b for _, b, _ in res], 0)); _upsert(C / 'val_auc.csv', dict(data=data, r=r, model=model, val_auc=round(va, 5)))
+        print(data, r, model, 'val', round(va, 4), 'test', round(fast_auc(TE, out[model].values), 4), f'{sec}s/seed {gpu}MB', flush=True)
+
+SEAL_SEEDS = 3
+def run_seal(data, r):
+    """C3：SEAL 在公开基准上（第 18.3 节的规模控制），配置用韩国数据上选出的，3 个种子。"""
+    import seal as S
+    from sklearn.decomposition import TruncatedSVD
+    x, E = load(data); edges, deg, TR, VA, TE = split(len(x), E, r); rng = np.random.default_rng(SEED_DATA)
+    h = TruncatedSVD(128, random_state=0).fit_transform(x).astype(np.float32); h = (h - h.mean(0)) / h.std(0)
+    TRp = TR.groupby('pair_id').head(1 + 5)   # 每个正例 + 前 5 个负例
+    pid = TRp.pair_id.unique()
+    if len(pid) > 20000: TRp = TRp[TRp.pair_id.isin(rng.choice(pid, 20000, replace=False))]
+    def sub(D, k):
+        p = D.pair_id.unique(); return D[D.pair_id.isin(rng.choice(p, k, replace=False))] if len(p) > k else D
+    VAs, TEs = (sub(VA, 1000), sub(TE, 2000)) if data == 'Photo' else (VA, TE)
+    t0 = time.time(); g = S.Graph(len(x), edges)
+    st = {k: S.extract(g, D.anchor.values, D.other.values) for k, D in (('tr', TRp), ('va', VAs), ('te', TEs))}; tex = round(time.time() - t0, 1)
+    print(data, r, 'SEAL subgraphs', {k: len(v['noff']) - 1 for k, v in st.items()}, f'{tex}s', flush=True)
+    cfg = json.load(open(KR_CFG / 'base_config_seal.json'))['cfg']; xt = torch.tensor(h)
+    if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
+    t0 = time.time()
+    res = [S.train(xt, st['tr'], TRp.label.values, st['va'], lambda s_: fast_auc(VAs, s_), st['te'], sd, cfg['hid'], cfg['lr']) for sd in range(1, SEAL_SEEDS + 1)]
+    gpu = round(torch.cuda.max_memory_allocated() / 2 ** 20) if torch.cuda.is_available() else 0; sec = round((time.time() - t0) / SEAL_SEEDS, 2)
+    out = TEs[['pair_id', 'anchor', 'other', 'label']].copy(); out['seal'] = np.mean([c for _, _, c in res], 0)
+    for k, (_, _, c) in enumerate(res, 1): out[f'seal_s{k}'] = c
+    out.to_csv(C / f'seal_{data}_r{r:.1f}.csv', index=False)
+    _upsert(C / 'runtime.csv', dict(data=data, r=r, model='seal', seconds=sec, gpu_mb=gpu, error='', extract_s=tex))
+    print(data, r, 'seal test', round(fast_auc(TEs, out.seal.values), 4), f'{sec}s/seed {gpu}MB', flush=True)
+
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser(); ap.add_argument('cmd'); ap.add_argument('--data'); ap.add_argument('--r', type=float); ap.add_argument('--seeds', type=int, default=10)
+    ap = argparse.ArgumentParser(); ap.add_argument('cmd'); ap.add_argument('--data'); ap.add_argument('--r', type=float); ap.add_argument('--seeds', type=int, default=10); ap.add_argument('--models', default='')
     ap.add_argument('--device', default='cuda'); A = ap.parse_args()
     if A.device != 'cpu' and torch.cuda.is_available(): torch.set_default_device(A.device)
     if A.cmd == 'run': run(A.data, A.r, A.seeds)
     elif A.cmd == 'eval': evaluate()
+    elif A.cmd == 'run-c': run_c(A.data, A.r, A.seeds, A.models.split(','))
+    elif A.cmd == 'run-seal': run_seal(A.data, A.r)

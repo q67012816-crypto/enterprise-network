@@ -34,12 +34,14 @@ class ColdBrew(nn.Module):
     def __init__(s, fin, hid=128, drop=0.3, **kw):
         super().__init__(); s.t = SageEnc(fin, hid, drop); s.stu = nn.Sequential(nn.Linear(fin, hid), nn.ReLU(), nn.Linear(hid, hid)); s.dec_ = PairDecoder(hid)
     def prepare(s, Y): return dict(A=sparse_mean_adj(len(Y['ids']), Y['edges']), has=torch.tensor(np.asarray(Y['deg']) > 0))
-    def embed(s, x, P):
+    def teacher(s, x, P):
         h = x
         for k, (a, b) in enumerate(zip(s.t.self_l, s.t.nb_l)):
             h = a(h) + b(torch.sparse.mm(P['A'], h))
             if k == 0: h = s.t.drop(torch.relu(h))
-        z = s.stu(x); has = P['has']
+        return h
+    def embed(s, x, P):
+        h = s.teacher(x, P); z = s.stu(x); has = P['has']
         kd = F.mse_loss(z[has], h[has].detach()) if has.any() else torch.zeros(())
         return torch.where(has[:, None], h, z), kd
     def dec(s, h, u, v): return s.dec_(h, u, v)
@@ -90,5 +92,19 @@ class TailGNN(nn.Module):
         return h, aux
     def dec(s, h, u, v): return s.dec_(h, u, v)
 
-BASELINES = {'gae': GAE, 'coldbrew': ColdBrew, 'degfair': DegFair, 'tailgnn': TailGNN}
+class ColdBrew2(ColdBrew):
+    """Cold Brew 两阶段版本（DEV_RESULTS 第 18.2 节，更接近原文）：stage = 1 时只用教师（孤立节点用教师的只有自环的表示）；
+    stage = 2 时教师和解码器冻结，学生在度 > 0 的节点上用 MSE 逼近教师表示，组合表示 = 度 > 0 用教师、度 = 0 用学生。
+    训练程序按 stage 分两次调用早停（见 bench.py、paper_dev.py）。"""
+    stage = 1
+    def embed(s, x, P):
+        if s.stage == 1: return s.teacher(x, P), torch.zeros(())
+        with torch.no_grad(): h = s.teacher(x, P)
+        z = s.stu(x); has = P['has']
+        kd = F.mse_loss(z[has], h[has]) if has.any() else torch.zeros(())
+        return torch.where(has[:, None], h, z), kd
+    def stage_params(s):
+        return list(s.t.parameters()) + list(s.dec_.parameters()) if s.stage == 1 else list(s.stu.parameters())
+
+BASELINES = {'gae': GAE, 'coldbrew': ColdBrew, 'coldbrew2': ColdBrew2, 'degfair': DegFair, 'tailgnn': TailGNN}
 BASE_GRID = [dict(hid=h, lr=lr) for h in (64, 128) for lr in (1e-3, 1e-2)]   # 每个基线 4 个配置，只在 F1、F2 上选（第 16.2 节）
