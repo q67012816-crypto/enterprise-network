@@ -44,6 +44,20 @@ VARIANTS = {   # 名称: (模型, 选项)
     'sage+ile': ('sage', dict(target=False, ile='all')),
     # 后融合（不调参）：两个已有变体的分数在每个验证年内转成百分位秩后等权平均
     'ens:dfgt|M1+il': ('ens', dict(parts=('dfgt', 'M1+il'))), 'ens:dfgt|M1': ('ens', dict(parts=('dfgt', 'M1'))),
+    # 不含结构信息的版本：port + 细行业（same3/4/5），去掉 hist_has/aff*/rev*（它们依赖过去的持股关系）
+    'dfgt+port+fine': ('dfgt', dict(target=False, pf=('port', 'fine'))), 'dfgt+port+fine+il': ('dfgt', dict(target=False, pf=('port', 'fine', 'il'))),
+    'M1+port+fine+il': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'fine', 'il'))),
+    # 第 4 项（hyslr_feats.py）：最大股东及特殊关系人
+    'M1+hs': ('lr', dict(C=0.1, target=False, scores=False, pf=('hs',))), 'M1+il+hs': ('lr', dict(C=0.1, target=False, scores=False, pf=('il', 'hs'))),
+    'M1+pf+il+hs': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind', 'il', 'hs'))),
+    'M1+hs-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('hs_len',))),
+    'dfgt+pf+hs': ('dfgt', dict(target=False, pf=('port', 'ind', 'hs'))), 'dfgt+pf+il+hs': ('dfgt', dict(target=False, pf=('port', 'ind', 'il', 'hs'))),
+    'dfgt+ile+pf+il+hs': ('dfgt', dict(target=False, ile='all', pf=('port', 'ind', 'il', 'hs'))),
+    'dfgt+port+fine+il+hs': ('dfgt', dict(target=False, pf=('port', 'fine', 'il', 'hs'))), 'M1+port+fine+il+hs': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'fine', 'il', 'hs'))),
+    # 探索性（冻结前追加）：履历中的前任职公司（career_feats.py）与 5% 大量持股人（majorstock_feats.py）
+    'M1+car': ('lr', dict(C=0.1, target=False, scores=False, pf=('car',))), 'M1+il+car': ('lr', dict(C=0.1, target=False, scores=False, pf=('il', 'car'))),
+    'M1+ms': ('lr', dict(C=0.1, target=False, scores=False, pf=('ms',))), 'M1+il+ms': ('lr', dict(C=0.1, target=False, scores=False, pf=('il', 'ms'))),
+    'dfgt+port+fine+il+car': ('dfgt', dict(target=False, pf=('port', 'fine', 'il', 'car'))), 'dfgt+port+fine+il+ms': ('dfgt', dict(target=False, pf=('port', 'fine', 'il', 'ms'))),
     'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
     'dfgt+pf': ('dfgt', dict(target=False, pf=('port', 'ind'))), 'dfgt-nograph+pf': ('dfgt', dict(target=False, aug=False, nograph=True, pf=('port', 'ind'))),
@@ -54,10 +68,16 @@ def pf_matrix(X, groups, tr_years):
     用本折训练年的均值和标准差标准化。未计算的行（fy 2024）全为 0。输出 float32 数组。"""
     from pair_feats import PORT, IND
     from interlock_feats import IL
+    MS = ['ms_common', 'ms_common_inst', 'ms_common_indiv', 'ms_has_a', 'ms_has_o']   # 与 majorstock_feats.MS 相同
+    HS = ['hs_same_max', 'hs_shared', 'hs_corp', 'hs_exec_ao', 'hs_exec_oa', 'hs_has_a', 'hs_has_o']   # 与 hyslr_feats.HS 相同
     F = pd.read_csv(FE / 'pair_feats.csv', index_col='row').reindex(X.index)
     if 'il' in groups: F = F.join(pd.read_csv(FE / 'interlock_feats.csv', index_col='row').reindex(X.index))
+    if 'hs' in groups: F = F.join(pd.read_csv(FE / 'hyslr_feats.csv', index_col='row').reindex(X.index))
+    if 'hs_len' in groups: F = F.join(pd.read_csv(FE / 'hyslr_feats_lenient.csv', index_col='row').reindex(X.index))
+    if 'car' in groups: F = F.join(pd.read_csv(FE / 'career_feats.csv', index_col='row').reindex(X.index))
+    if 'ms' in groups: F = F.join(pd.read_csv(FE / 'majorstock_feats.csv', index_col='row').reindex(X.index))
     if 'il_len' in groups: F = F.join(pd.read_csv(FE / 'interlock_feats_lenient.csv', index_col='row').reindex(X.index))
-    cols = [c for g in groups for c in {'port': PORT, 'ind': IND, 'fine': IND[:3], 'hist': IND[3:], 'il': IL, 'il_len': IL}[g]]; Z = F[cols].copy()
+    cols = [c for g in groups for c in {'port': PORT, 'ind': IND, 'fine': IND[:3], 'hist': IND[3:], 'il': IL, 'il_len': IL, 'hs': HS, 'hs_len': HS, 'car': ['car_ao', 'car_oa'], 'ms': MS}[g]]; Z = F[cols].copy()
     if 'port' in groups: Z['pf_miss'] = Z.pf_size_gap.isna().astype(float)
     Z = Z.fillna(0.); tr = X.fy.isin(tr_years).values; mu, sd = Z[tr].mean(), Z[tr].std().replace(0, 1)
     Z = (Z - mu) / sd; Z.loc[X.fy.ge(2024).values] = 0.
@@ -229,25 +249,44 @@ def evaluate():
     tab = pd.DataFrame({g: {v: W.loc[m, f'{v}|AUC'].mean() for v in vs} for g, m in grp.items()}); tab['gap(high-low)'] = tab['high(≥2)'] - tab['low(≤1)']
     tab['n'] = ''; ns = {g: int(m.sum()) for g, m in grp.items()}
     cl = W.cluster.values; uc = np.unique(cl); ix = {c: np.where(cl == c)[0] for c in uc}; rng = np.random.default_rng(20261103)
-    draws = [np.concatenate([ix[c] for c in rng.choice(uc, len(uc))]) for _ in range(1000)]
+    draws = [np.concatenate([ix[c] for c in rng.choice(uc, len(uc))]) for _ in range(A.boot)]   # 默认 1000；确认时 P1、C1、C2 用 --boot 10000
     def ci(fn):
-        v = np.array([fn(W.iloc[d]) for d in draws]); return round(fn(W), 4), round(float(np.nanpercentile(v, 2.5)), 4), round(float(np.nanpercentile(v, 97.5)), 4)
+        v = np.array([fn(W.iloc[d]) for d in draws]); p = min(1., 2 * min(float(np.mean(v <= 0)), float(np.mean(v >= 0))))   # 双侧 bootstrap p 值（分辨率 2/B）
+        return float(fn(W)), float(np.nanpercentile(v, 2.5)), float(np.nanpercentile(v, 97.5)), float(np.nanpercentile(v, 5)), p   # (点估计, 双侧 95% 下限, 上限, 单侧 95% 下限, 双侧 p)；不在这里四舍五入，避免打印时二次舍入
     mean = lambda v, g: (lambda U: U.loc[(U.mindeg <= 1) if g == 'low' else (U.mindeg >= 2) if g == 'high' else (U.mindeg == 0) if g == 'iso' else U.index == U.index, f'{v}|AUC'].mean())
     gap = lambda v: (lambda U: mean(v, 'high')(U) - mean(v, 'low')(U))
     comps = {}
     for a, b in [('dfgt', 'M1'), ('dfgt', 'sage'), ('dfgt', 'dfgt-noaug'), ('dfgt', 'dfgt-nosim'), ('dfgt', 'dfgt-nossl'), ('dfgt0', 'dfgt'), ('dfgt-soft', 'dfgt'), ('dfgt-soft', 'dfgt-noaug'), ('dfgt0-soft', 'dfgt-soft'), ('dfgt-soft', 'M1'), ('dfgt-soft', 'sage'), ('dfgt-soft', 'dfgt-soft-nossl'), ('dfgt', 'dfgt-nograph'), ('dfgt-nograph', 'M1'),
                  ('dfgt+T', 'dfgt'), ('dfgt0+T', 'dfgt'), ('M1+T', 'M1'), ('sage+T', 'sage'), ('M1+scores', 'M1'),
-                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
-        if a in vs and b in vs:
+                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
+        if a in vs and b in vs and (not A.only or f'{a}:{b}' in A.only.split(',')):
             comps[f'{a} − {b}'] = {g: ci(lambda U, a=a, b=b, g=g: mean(a, g)(U) - mean(b, g)(U)) for g in ('all', 'low', 'high', 'iso')}
             comps[f'{a} − {b}']['gap_reduction'] = ci(lambda U, a=a, b=b: gap(b)(U) - gap(a)(U))
-    res = dict(n=ns, table=tab.drop(columns='n').round(4).to_dict('index'), comparisons=comps)
-    json.dump(res, open(O / 'dev_eval.json', 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    gaps = {v: ci(gap(v)) for v in vs if not A.only or v in A.gaps.split(',')}   # 每个模型自身的度偏差差距 Δ = AUC(高连接) − AUC(低连接)，同一套 bootstrap 抽样
+    r4 = lambda x: [round(v, 4) for v in x]
+    res = dict(n=ns, table=tab.drop(columns='n').round(4).to_dict('index'), gap_ci={k: r4(x) for k, x in gaps.items()},
+               comparisons={k: {g: r4(x) for g, x in v.items()} for k, v in comps.items()})
+    json.dump(res, open(O / ('dev_eval.json' if A.boot == 1000 and not A.only else f'dev_eval_boot{A.boot}.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     print('n', ns); print(tab.drop(columns='n').round(3).to_string())
+    print('Δ (high − low) [95%]:'); [print(f'  {v:22s} {x[0]:+.3f} [{x[1]:+.3f},{x[2]:+.3f}]') for v, x in gaps.items()]
     for k, v in comps.items(): print(f'{k:22s}', '  '.join(f'{g}: {x[0]:+.3f} [{x[1]:+.3f},{x[2]:+.3f}]' for g, x in v.items()))
+    if 'dfgt' in gaps and 'dfgt − M1' in comps:   # 确认性假设 C1、C2 族（3 个假设）的 Holm 判定；满足 = Holm 显著且点估计方向为正
+        fam = {'C1 Δ(dfgt)': gaps['dfgt'], 'C2 dfgt − M1 (all)': comps['dfgt − M1']['all'], 'C2 dfgt − M1 (low)': comps['dfgt − M1']['low']}
+        order = sorted(fam, key=lambda k: fam[k][4]); stop = False; res['holm_C1_C2'] = {}
+        print(f'Holm（C1、C2 族，B={A.boot}）：')
+        for r, k in enumerate(order):
+            thr = .05 / (len(order) - r); sig = (not stop) and fam[k][4] < thr; stop = stop or not sig
+            verdict = ('满足' if fam[k][0] > 0 else '不满足（方向相反）') if sig else '不满足'
+            res['holm_C1_C2'][k] = dict(est=round(fam[k][0], 4), p=fam[k][4], threshold=round(thr, 4), verdict=verdict)
+            print(f'  {k:20s} est {fam[k][0]:+.3f}  p {fam[k][4]:.4f}  阈值 {thr:.4f}  → {verdict}')
+        json.dump(res, open(O / ('dev_eval.json' if A.boot == 1000 and not A.only else f'dev_eval_boot{A.boot}.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    print('单侧 95% 下限（5% 分位）：'); [print(f'  {k:22s}', '  '.join(f'{g}: {x[3]:+.3f}' for g, x in v.items())) for k, v in comps.items() if k in ('M1+il − M1', 'dfgt − M1')]
 
 ap = argparse.ArgumentParser(); ap.add_argument('cmd'); ap.add_argument('--variant'); ap.add_argument('--threads', type=int, default=3)
 ap.add_argument('--device', default='cpu', help="cpu（默认）或 cuda；cuda 时所有张量默认建在 GPU 上，模型代码不用改"); ap.add_argument('--seeds', type=int, default=3, help='GNN 种子数（种子为 1..n；默认 3，与之前一致）')
+ap.add_argument('--boot', type=int, default=1000, help='bootstrap 次数（默认 1000；确认性检验 P1、C1、C2 用 10000）')
+ap.add_argument('--only', default='', help='只算这些比较，逗号分隔的 a:b（例如 M1+il:M1）；配合 --boot 使用，结果写 dev_eval_boot<B>.json')
+ap.add_argument('--gaps', default='', help='与 --only 一起用：只算这些模型自身的 Δ 区间，逗号分隔')
 ap.add_argument('--out', default='out_dev', help='分数输出目录（相对 linkpred/）'); A = ap.parse_args()
 O = L / A.out; O.mkdir(exist_ok=True); SEEDS = list(range(1, A.seeds + 1))
 if torch is not None:

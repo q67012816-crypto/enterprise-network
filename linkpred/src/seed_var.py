@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from paper_data import rd, within_metrics
 
 L = Path(__file__).resolve().parents[1]; D = L / 'data_v3x'
-COMPS = [('dfgt+il', 'dfgt'), ('dfgt+pf', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile', 'dfgt'), ('dfgt+ile_in', 'dfgt'),
+COMPS = [('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('dfgt+il', 'dfgt'), ('dfgt+pf', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile', 'dfgt'), ('dfgt+ile_in', 'dfgt'),
          ('dfgt+ile+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('sage+ile', 'sage'), ('dfgt', 'dfgt-nograph'), ('dfgt', 'sage')]
 
 def main(out):
