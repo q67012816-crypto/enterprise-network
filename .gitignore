@@ -22,3 +22,4 @@ linkpred/out_dev/hyslr_feats*.csv
 linkpred/out_dev/career_feats.csv
 linkpred/out_dev/majorstock_feats.csv
 linkpred/bench/raw/
+linkpred/bench/out/*_r*.csv

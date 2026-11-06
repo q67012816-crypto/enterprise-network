@@ -1,0 +1,9 @@
+model,fold,cfg,hid,lr,val_auc,sec_per_seed
+degfair,F1,0,64,0.001,0.4402,1.2
+degfair,F1,1,64,0.01,0.689,2.1
+degfair,F1,2,128,0.001,0.649,0.9
+degfair,F1,3,128,0.01,0.6531,0.7
+degfair,F2,0,64,0.001,0.5043,1.0
+degfair,F2,1,64,0.01,0.6882,3.8
+degfair,F2,2,128,0.001,0.6792,3.1
+degfair,F2,3,128,0.01,0.6894,2.8

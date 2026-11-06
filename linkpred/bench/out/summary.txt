@@ -1,0 +1,39 @@
+Cora      r=0.0 n(all/iso)=529/57  DFGT−nograph: all [0.0012, -0.0079, 0.0097]  iso [-0.0232, -0.0621, 0.0148]  low20 [-0.0059, -0.0257, 0.0115]  seeds>0(iso) 1
+Cora      r=0.1 n(all/iso)=529/170  DFGT−nograph: all [0.0085, -0.0025, 0.0192]  iso [-0.0048, -0.0311, 0.0212]  low20 [0.0084, -0.0102, 0.0275]  seeds>0(iso) 2
+Cora      r=0.2 n(all/iso)=529/274  DFGT−nograph: all [-0.0081, -0.0174, 0.0014]  iso [-0.0214, -0.0372, -0.006]  low20 [-0.0214, -0.0372, -0.006]  seeds>0(iso) 2
+Cora      r=0.3 n(all/iso)=529/358  DFGT−nograph: all [-0.0175, -0.0301, -0.0053]  iso [-0.024, -0.0422, -0.0065]  low20 [-0.024, -0.0422, -0.0065]  seeds>0(iso) 1
+Cora      r=0.4 n(all/iso)=529/418  DFGT−nograph: all [-0.0126, -0.0275, 0.0017]  iso [-0.0161, -0.0344, 0.0014]  low20 [-0.0161, -0.0344, 0.0014]  seeds>0(iso) 0
+Cora      r=0.5 n(all/iso)=529/459  DFGT−nograph: all [-0.0161, -0.0323, 0.0009]  iso [-0.0196, -0.038, -0.0012]  low20 [-0.0196, -0.038, -0.0012]  seeds>0(iso) 3
+CiteSeer  r=0.0 n(all/iso)=456/137  DFGT−nograph: all [-0.0007, -0.0098, 0.0088]  iso [-0.0085, -0.031, 0.0138]  low20 [-0.0024, -0.0181, 0.0141]  seeds>0(iso) 1
+CiteSeer  r=0.1 n(all/iso)=456/209  DFGT−nograph: all [0.0015, -0.0078, 0.0118]  iso [0.0061, -0.0105, 0.0244]  low20 [0.0061, -0.0105, 0.0244]  seeds>0(iso) 2
+CiteSeer  r=0.2 n(all/iso)=456/261  DFGT−nograph: all [-0.0125, -0.0255, -0.0006]  iso [-0.0179, -0.0384, 0.0011]  low20 [-0.0179, -0.0384, 0.0011]  seeds>0(iso) 3
+CiteSeer  r=0.3 n(all/iso)=456/316  DFGT−nograph: all [0.0024, -0.0075, 0.0132]  iso [0.0004, -0.0139, 0.0141]  low20 [0.0004, -0.0139, 0.0141]  seeds>0(iso) 3
+CiteSeer  r=0.4 n(all/iso)=456/356  DFGT−nograph: all [-0.0082, -0.0209, 0.0025]  iso [-0.0088, -0.0245, 0.0048]  low20 [-0.0088, -0.0245, 0.0048]  seeds>0(iso) 2
+CiteSeer  r=0.5 n(all/iso)=456/388  DFGT−nograph: all [0.0019, -0.0114, 0.0161]  iso [0.0034, -0.0115, 0.0193]  low20 [0.0034, -0.0115, 0.0193]  seeds>0(iso) 4
+Photo     r=0.0 n(all/iso)=11909/35  DFGT−nograph: all [0.0226, 0.0211, 0.0241]  iso [-0.2406, -0.3217, -0.1584]  low20 [-0.0006, -0.0108, 0.0101]  seeds>0(iso) 0
+Photo     r=0.1 n(all/iso)=11909/2178  DFGT−nograph: all [-0.0194, -0.0227, -0.016]  iso [-0.2148, -0.2265, -0.2036]  low20 [-0.1918, -0.2033, -0.1809]  seeds>0(iso) 0
+Photo     r=0.2 n(all/iso)=11909/4117  DFGT−nograph: all [-0.0776, -0.0825, -0.0727]  iso [-0.2663, -0.276, -0.2575]  low20 [-0.2663, -0.276, -0.2575]  seeds>0(iso) 0
+Photo     r=0.3 n(all/iso)=11909/5922  DFGT−nograph: all [-0.1826, -0.1895, -0.1758]  iso [-0.3886, -0.3974, -0.3792]  low20 [-0.3886, -0.3974, -0.3792]  seeds>0(iso) 0
+Photo     r=0.4 n(all/iso)=11909/7424  DFGT−nograph: all [-0.2183, -0.2241, -0.2124]  iso [-0.36, -0.3675, -0.3521]  low20 [-0.36, -0.3675, -0.3521]  seeds>0(iso) 0
+Photo     r=0.5 n(all/iso)=11909/8818  DFGT−nograph: all [-0.2727, -0.2788, -0.2663]  iso [-0.3762, -0.3842, -0.3685]  low20 [-0.3762, -0.3842, -0.3685]  seeds>0(iso) 0
+{
+ "per_data": {
+  "Cora": {
+   "supported": false,
+   "n_r_checked": 5,
+   "spearman_all_gain_vs_r": -0.771
+  },
+  "CiteSeer": {
+   "supported": true,
+   "n_r_checked": 5,
+   "spearman_all_gain_vs_r": 0.257
+  },
+  "Photo": {
+   "supported": false,
+   "n_r_checked": 5,
+   "spearman_all_gain_vs_r": -1.0
+  }
+ },
+ "n_supported": 1,
+ "n_data": 3
+}

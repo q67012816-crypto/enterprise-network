@@ -1,0 +1,8 @@
+{
+ "cfg": {
+  "hid": 64,
+  "lr": 0.01
+ },
+ "cfg_index": 1,
+ "mean_val_auc_F1F2": 0.6555
+}
