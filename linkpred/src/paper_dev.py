@@ -5,6 +5,7 @@
       python src/paper_dev.py eval                     # 汇总所有变体：整体/低/高连接组组内 AUC、差距、配对 bootstrap
 超参数沿用 A7 在验证集上选出的值（SAGE：hidden 128、lr 1e-2；DFGT：lr 3e-3、λ 0.1；M1 C=0.1，M1+scores C=10），本阶段不再调参。"""
 import argparse, collections, json, sys, time
+RT = []   # 新基线的训练时间与显存记录
 from pathlib import Path
 import numpy as np, pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -15,6 +16,7 @@ try:   # 逻辑回归变体不需要 torch
     from paper_models import SAGE, fit_kmeans
     from dev_models import DFGTDev, dfgt_prepare_dev
     from dual_models import DualChannel, dcm_prepare
+    from baselines import BASELINES, BASE_GRID
 except ImportError: torch = None
 
 L = Path(__file__).resolve().parents[1]; P0 = L.parent; D = L / 'data_v3x'; FE = O = L / 'out_dev'   # FE：点对特征文件所在目录；O：分数输出目录（可用 --out 改）
@@ -62,6 +64,8 @@ VARIANTS = {   # 名称: (模型, 选项)
     # DCM（DEV_RESULTS 第 14 节）：A 关系分开聚合，B 度数门控点对证据，C 以 M1 + il 的 logit 为基础分数的残差学习；超参数见 dcm_config.json（tune 命令选出）
     'dcm': ('dcm', dict(rel=True, gate=True, resid=True)), 'dcm-noA': ('dcm', dict(rel=False, gate=True, resid=True)),
     'dcm-noB': ('dcm', dict(rel=True, gate=False, resid=True)), 'dcm-noC': ('dcm', dict(rel=True, gate=True, resid=False)),
+    # TNSE 实验 B 的新基线（baselines.py，按论文重写，不是官方实现）；超参数见 base_config_<名>.json（tune-base 命令选出）
+    'gae': ('base', dict(name='gae')), 'coldbrew': ('base', dict(name='coldbrew')), 'degfair': ('base', dict(name='degfair')), 'tailgnn': ('base', dict(name='tailgnn')),
     'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
     'dfgt+pf': ('dfgt', dict(target=False, pf=('port', 'ind'))), 'dfgt-nograph+pf': ('dfgt', dict(target=False, aug=False, nograph=True, pf=('port', 'ind'))),
@@ -253,6 +257,43 @@ def run_dual(X, Ys, tr_years, va_year, opt, seed, cfg, inputs):
             if bad >= 15: break
     return state, best
 
+def run_base(X, Ys, tr_years, va_year, name, seed, cfg):
+    """训练一个新基线：与 run_gnn 相同的训练和早停；DegFairGNN 另加公平正则（系数 1），其他模型的辅助损失系数为 1。"""
+    torch.manual_seed(seed); np.random.seed(seed)
+    years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}
+    m = BASELINES[name](xs[va_year].shape[1], hid=cfg['hid']); Ps = {t: m.prepare(Ys[t]) for t in years}
+    TR, VA = X[X.fy.isin(tr_years)], X[X.fy == va_year]; PI_tr, PI_va = pair_idx(Ys, TR), pair_idx(Ys, VA)
+    y = torch.tensor(X.label.values, dtype=torch.float32); ntr = len(TR)
+    opt_ = torch.optim.Adam(m.parameters(), lr=cfg['lr']); best, state, bad = -1, None, 0
+    def score():
+        m.eval(); s = np.zeros(len(X))
+        with torch.no_grad():
+            for t, (u, v, ix) in PI_va.items(): h, _ = m.embed(xs[t], Ps[t]); s[ix] = torch.sigmoid(m.dec(h, u, v)).cpu().numpy()
+        return s[VA.index]
+    for ep in range(1, 151):
+        m.train(); opt_.zero_grad(); loss = 0.
+        for t, (u, v, ix) in PI_tr.items():
+            h, aux = m.embed(xs[t], Ps[t]); pl = torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, u, v), y[ix], reduction='none')
+            loss = loss + pl.sum() / ntr + aux / len(PI_tr)
+            if name == 'degfair': loss = loss + m.fair_loss(pl, Ps[t], u, v) / len(PI_tr)
+        loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
+        if a > best: best, bad, state = a, 0, s
+        else:
+            bad += 1
+            if bad >= 15: break
+    return state, best
+
+def tune_base(name):
+    """只用 F1、F2 的验证年为一个基线选超参数：BASE_GRID 的 4 个配置 × 3 个种子，按全部组验证 AUC（分数平均后）两折均值选；全部记录。"""
+    X, N, G = load(); rows = []
+    for f in ('F1', 'F2'):
+        tr_years, va_year = FOLDS[f]; Ys = node_tables(N, G, list(tr_years) + [va_year], tr_years, False); VA = X[X.fy == va_year]
+        for k, cfg in enumerate(BASE_GRID):
+            t0 = time.time(); s = np.mean([run_base(X, Ys, tr_years, va_year, name, sd, cfg)[0] for sd in (1, 2, 3)], 0)
+            rows.append(dict(model=name, fold=f, cfg=k, **cfg, val_auc=round(fast_auc(VA, s), 4), sec_per_seed=round((time.time() - t0) / 3, 1))); print(rows[-1], flush=True)
+    T = pd.DataFrame(rows); T.to_csv(O / f'base_tuning_{name}.csv', index=False); M = T.groupby('cfg').val_auc.mean(); k = int(M.idxmax())
+    json.dump(dict(cfg=BASE_GRID[k], cfg_index=k, mean_val_auc_F1F2=round(float(M.max()), 4)), open(O / f'base_config_{name}.json', 'w'), indent=1); print('selected', name, BASE_GRID[k])
+
 DCM_GRID = [dict(hid=h, lr=lr, drop=d) for h in (64, 128) for lr in (1e-3, 3e-3) for d in (0.1, 0.3)]   # 事先写定的 8 个配置（第 14 节）
 
 def tune_dcm():
@@ -271,7 +312,7 @@ def tune_dcm():
 
 def run(variant):
     """跑一个变体：3 折 ×（逻辑回归 1 次 / GNN 3 个种子取平均分数），保存验证分数。"""
-    model, opt = VARIANTS[variant]; X, N, G = load(); rows = []
+    model, opt = VARIANTS[variant]; X, N, G = load(); rows = []; RT.clear()
     if model == 'ens':
         S = [pd.read_csv(O / sfile(p), dtype={'anchor': str, 'other': str, 'pair_id': str}) for p in opt['parts']]
         out = S[0].drop(columns='score').assign(score=np.mean([s_.groupby('fy').score.rank(pct=True).values for s_ in S], 0))
@@ -290,6 +331,11 @@ def run(variant):
         Ys = node_tables(N, G, list(tr_years) + [va_year], tr_years, opt.get('target', False)); VA = X[X.fy == va_year]
         per = {}
         if model == 'lr': s = run_lr(X, Ys, tr_years, va_year, opt)
+        elif model == 'base':
+            cfg = json.load(open(O / f"base_config_{opt['name']}.json"))['cfg']
+            if torch.cuda.is_available(): torch.cuda.reset_peak_memory_stats()
+            t0 = time.time(); per = {f'score_s{sd}': run_base(X, Ys, tr_years, va_year, opt['name'], sd, cfg)[0] for sd in SEEDS}; s = np.mean(list(per.values()), 0)
+            RT.append(dict(model=variant, fold=f, sec_per_seed=round((time.time() - t0) / len(SEEDS), 2), gpu_mb=round(torch.cuda.max_memory_allocated() / 2 ** 20) if torch.cuda.is_available() else 0))
         elif model == 'dcm':
             cfg = json.load(open(O / 'dcm_config.json'))['cfg']; years = list(tr_years) + [va_year]; inp = dcm_inputs(X, N, Ys, years, tr_years, va_year)
             per = {f'score_s{sd}': run_dual(X, Ys, tr_years, va_year, opt, sd, cfg, inp)[0] for sd in SEEDS}; s = np.mean(list(per.values()), 0)
@@ -298,6 +344,9 @@ def run(variant):
         rows.append(VA[['pair_id', 'fy', 'anchor', 'other', 'label']].assign(fold=f, score=s, **(per if len(SEEDS) > 3 else {})))   # 多种子时另存每个种子的分数
         print(variant, f, round(fast_auc(VA, s), 4), flush=True)
     pd.concat(rows).to_csv(sfile(variant), index=False)
+    if RT:
+        f = O / 'runtime_kr.csv'; old = pd.read_csv(f) if f.exists() else pd.DataFrame(columns=['model'])
+        pd.concat([old[old.model != variant], pd.DataFrame(RT)]).to_csv(f, index=False)
 
 def evaluate():
     """汇总：每个正例的组内 AUC；按较小端度数分低连接（≤1）/ 高连接（≥2）/ 孤立（=0）；差距和配对 bootstrap（按 折×投资方 聚类）。"""
@@ -327,7 +376,7 @@ def evaluate():
     comps = {}
     for a, b in [('dfgt', 'M1'), ('dfgt', 'sage'), ('dfgt', 'dfgt-noaug'), ('dfgt', 'dfgt-nosim'), ('dfgt', 'dfgt-nossl'), ('dfgt0', 'dfgt'), ('dfgt-soft', 'dfgt'), ('dfgt-soft', 'dfgt-noaug'), ('dfgt0-soft', 'dfgt-soft'), ('dfgt-soft', 'M1'), ('dfgt-soft', 'sage'), ('dfgt-soft', 'dfgt-soft-nossl'), ('dfgt', 'dfgt-nograph'), ('dfgt-nograph', 'M1'),
                  ('dfgt+T', 'dfgt'), ('dfgt0+T', 'dfgt'), ('M1+T', 'M1'), ('sage+T', 'sage'), ('M1+scores', 'M1'),
-                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('dcm', 'dfgt+port+fine+il'), ('dcm', 'M1+il'), ('dcm', 'dcm-noA'), ('dcm', 'dcm-noB'), ('dcm', 'dcm-noC'), ('dcm-noA', 'dfgt+port+fine+il'), ('dcm-noB', 'dfgt+port+fine+il'), ('dcm-noC', 'dfgt+port+fine+il'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
+                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('gae', 'dfgt'), ('gae', 'dfgt-nograph'), ('gae', 'sage'), ('coldbrew', 'dfgt'), ('coldbrew', 'dfgt-nograph'), ('coldbrew', 'sage'), ('degfair', 'dfgt'), ('degfair', 'dfgt-nograph'), ('degfair', 'sage'), ('tailgnn', 'dfgt'), ('tailgnn', 'dfgt-nograph'), ('tailgnn', 'sage'), ('dcm', 'dfgt+port+fine+il'), ('dcm', 'M1+il'), ('dcm', 'dcm-noA'), ('dcm', 'dcm-noB'), ('dcm', 'dcm-noC'), ('dcm-noA', 'dfgt+port+fine+il'), ('dcm-noB', 'dfgt+port+fine+il'), ('dcm-noC', 'dfgt+port+fine+il'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
         if a in vs and b in vs and (not A.only or f'{a}:{b}' in A.only.split(',')):
             comps[f'{a} − {b}'] = {g: ci(lambda U, a=a, b=b, g=g: mean(a, g)(U) - mean(b, g)(U)) for g in ('all', 'low', 'high', 'iso')}
             comps[f'{a} − {b}']['gap_reduction'] = ci(lambda U, a=a, b=b: gap(b)(U) - gap(a)(U))
@@ -364,3 +413,4 @@ if torch is not None:
 if A.cmd == 'run': run(A.variant)
 elif A.cmd == 'eval': evaluate()
 elif A.cmd == 'tune-dcm': tune_dcm()
+elif A.cmd == 'tune-base': tune_base(A.variant)
