@@ -14,6 +14,7 @@ try:   # 逻辑回归变体不需要 torch
     import torch
     from paper_models import SAGE, fit_kmeans
     from dev_models import DFGTDev, dfgt_prepare_dev
+    from dual_models import DualChannel, dcm_prepare
 except ImportError: torch = None
 
 L = Path(__file__).resolve().parents[1]; P0 = L.parent; D = L / 'data_v3x'; FE = O = L / 'out_dev'   # FE：点对特征文件所在目录；O：分数输出目录（可用 --out 改）
@@ -58,6 +59,9 @@ VARIANTS = {   # 名称: (模型, 选项)
     'M1+car': ('lr', dict(C=0.1, target=False, scores=False, pf=('car',))), 'M1+il+car': ('lr', dict(C=0.1, target=False, scores=False, pf=('il', 'car'))),
     'M1+ms': ('lr', dict(C=0.1, target=False, scores=False, pf=('ms',))), 'M1+il+ms': ('lr', dict(C=0.1, target=False, scores=False, pf=('il', 'ms'))),
     'dfgt+port+fine+il+car': ('dfgt', dict(target=False, pf=('port', 'fine', 'il', 'car'))), 'dfgt+port+fine+il+ms': ('dfgt', dict(target=False, pf=('port', 'fine', 'il', 'ms'))),
+    # DCM（DEV_RESULTS 第 14 节）：A 关系分开聚合，B 度数门控点对证据，C 以 M1 + il 的 logit 为基础分数的残差学习；超参数见 dcm_config.json（tune 命令选出）
+    'dcm': ('dcm', dict(rel=True, gate=True, resid=True)), 'dcm-noA': ('dcm', dict(rel=False, gate=True, resid=True)),
+    'dcm-noB': ('dcm', dict(rel=True, gate=False, resid=True)), 'dcm-noC': ('dcm', dict(rel=True, gate=True, resid=False)),
     'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
     'dfgt+pf': ('dfgt', dict(target=False, pf=('port', 'ind'))), 'dfgt-nograph+pf': ('dfgt', dict(target=False, aug=False, nograph=True, pf=('port', 'ind'))),
@@ -149,8 +153,9 @@ def heur_scores(Y, a, o):
         out.append((np.log1p(len(c)), sum(1 / np.log(len(nb[z])) for z in c if len(nb[z]) > 1), len(c) / len(u) if u else 0., np.log1p(len(nb[i]) * len(nb[j]))))
     return np.array(out)
 
-def run_lr(X, Ys, tr_years, va_year, opt):
-    """逻辑回归（M1 及其变体）：双方节点特征 + 同行业 + 同市场（+ 可选启发式分数），只用本折训练年拟合。"""
+def run_lr(X, Ys, tr_years, va_year, opt, all_logits=False):
+    """逻辑回归（M1 及其变体）：双方节点特征 + 同行业 + 同市场（+ 可选启发式分数），只用本折训练年拟合。
+    all_logits=True 时返回本折训练年和验证年所有点对的 logit（Series，索引同 X），供 DCM 作基础分数。"""
     def design(df):
         rows = []
         for t, g in df.groupby('fy'):
@@ -165,6 +170,8 @@ def run_lr(X, Ys, tr_years, va_year, opt):
     TR = X[X.fy.isin(tr_years)]; VA = X[X.fy == va_year]
     Zt, Zv = design(TR), design(VA); mu, sd = Zt.mean(), Zt.std().replace(0, 1)
     m = LogisticRegression(C=opt['C'], max_iter=5000).fit(((Zt - mu) / sd).values, TR.label.values)
+    if all_logits:
+        Za = pd.concat([Zt, Zv]); return pd.Series(m.decision_function(((Za - mu) / sd).values), index=Za.index)
     return m.predict_proba(((Zv - mu) / sd).values)[:, 1]
 
 def run_gnn(X, Ys, tr_years, va_year, model, opt, seed):
@@ -203,6 +210,65 @@ def run_gnn(X, Ys, tr_years, va_year, model, opt, seed):
             if bad >= 15: break
     return state
 
+def dcm_inputs(X, N, Ys, years, tr_years, va_year):
+    """DCM 的输入：每年的三种邻接矩阵（持股 / 兼任 / 合并）、点对特征（il + port + fine，按本折训练年标准化）、
+    点对的持股图度数特征、基础分数（M1 + il 的 logit，只用本折训练年拟合）。"""
+    from interlock_feats import interlock_edges
+    IE = interlock_edges(); Ps = {}
+    for t in years:
+        Y = Ys[t]; e = IE.get(t, pd.DataFrame(columns=['src', 'dst'])); idx = Y['idx']
+        il = sorted({(min(idx[a], idx[b]), max(idx[a], idx[b])) for a, b in zip(e.src, e.dst) if a in idx and b in idx and a != b})
+        Ps[t] = dcm_prepare(len(Y['ids']), Y['edges'], il)
+    PF = torch.tensor(pf_matrix(X, ('port', 'fine', 'il'), tr_years))
+    DG = np.zeros((len(X), 2), dtype=np.float32)
+    for t, g in X[X.fy.isin(years)].groupby('fy'):
+        d = Ys[t]['deg']; a = d[[Ys[t]['idx'][c] for c in g.anchor]]; o = d[[Ys[t]['idx'][c] for c in g.other]]
+        DG[g.index.values] = np.log1p(np.vstack([np.minimum(a, o), np.maximum(a, o)]).T)
+    base = np.zeros(len(X), dtype=np.float32)
+    b = run_lr(X, Ys, tr_years, va_year, dict(C=0.1, scores=False, pf=('il',)), all_logits=True); base[b.index.values] = b.values
+    return Ps, PF, torch.tensor(DG), torch.tensor(base)
+
+def run_dual(X, Ys, tr_years, va_year, opt, seed, cfg, inputs):
+    """训练一个 DCM：本折训练年的点对，按验证组内 AUC 早停（patience 15，最多 150 轮），与 run_gnn 相同。"""
+    torch.manual_seed(seed); np.random.seed(seed)
+    years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}; Ps, PF, DG, base = inputs
+    m = DualChannel(xs[va_year].shape[1], PF.shape[1], hid=cfg['hid'], drop=cfg['drop'], rel=opt['rel'], gate=opt['gate'], resid=opt['resid'])
+    TR, VA = X[X.fy.isin(tr_years)], X[X.fy == va_year]; PI_tr, PI_va = pair_idx(Ys, TR), pair_idx(Ys, VA)
+    y = torch.tensor(X.label.values, dtype=torch.float32); ntr = len(TR)
+    opt_ = torch.optim.Adam(m.parameters(), lr=cfg['lr'], weight_decay=1e-5); best, state, bad = -1, None, 0
+    lg = lambda h, u, v, ix: m.logit(h, u, v, PF[ix], DG[ix], base[ix])
+    def score():
+        m.eval(); s = np.zeros(len(X))
+        with torch.no_grad():
+            for t, (u, v, ix) in PI_va.items(): h = m.embed(xs[t], Ps[t]); s[ix] = torch.sigmoid(lg(h, u, v, ix)).cpu().numpy()
+        return s[VA.index]
+    for ep in range(1, 151):
+        m.train(); opt_.zero_grad(); loss = 0.
+        for t, (u, v, ix) in PI_tr.items():
+            h = m.embed(xs[t], Ps[t]); loss = loss + torch.nn.functional.binary_cross_entropy_with_logits(lg(h, u, v, ix), y[ix], reduction='sum') / ntr
+        loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
+        if a > best: best, bad, state = a, 0, s
+        else:
+            bad += 1
+            if bad >= 15: break
+    return state, best
+
+DCM_GRID = [dict(hid=h, lr=lr, drop=d) for h in (64, 128) for lr in (1e-3, 3e-3) for d in (0.1, 0.3)]   # 事先写定的 8 个配置（第 14 节）
+
+def tune_dcm():
+    """只用 F1、F2 的验证年调参：每个配置 3 个种子，按“全部组”验证组内 AUC（分数平均后）的两折均值选；全部配置写 dcm_tuning.csv，选中的写 dcm_config.json。"""
+    X, N, G = load(); rows = []
+    for f in ('F1', 'F2'):
+        tr_years, va_year = FOLDS[f]; years = list(tr_years) + [va_year]
+        Ys = node_tables(N, G, years, tr_years, False); inp = dcm_inputs(X, N, Ys, years, tr_years, va_year); VA = X[X.fy == va_year]
+        for k, cfg in enumerate(DCM_GRID):
+            s = np.mean([run_dual(X, Ys, tr_years, va_year, VARIANTS['dcm'][1], sd, cfg, inp)[0] for sd in (1, 2, 3)], 0)
+            rows.append(dict(fold=f, cfg=k, **cfg, val_auc=round(fast_auc(VA, s), 4))); print(rows[-1], flush=True)
+    T = pd.DataFrame(rows); T.to_csv(O / 'dcm_tuning.csv', index=False)
+    M = T.groupby('cfg').val_auc.mean(); k = int(M.idxmax()); cfg = DCM_GRID[k]
+    json.dump(dict(cfg=cfg, cfg_index=k, mean_val_auc_F1F2=round(float(M.max()), 4), rule='mean all-group val AUC on F1, F2; 3 seeds'), open(O / 'dcm_config.json', 'w'), indent=1)
+    print('selected', k, cfg, round(float(M.max()), 4)); print(M.round(4).to_string())
+
 def run(variant):
     """跑一个变体：3 折 ×（逻辑回归 1 次 / GNN 3 个种子取平均分数），保存验证分数。"""
     model, opt = VARIANTS[variant]; X, N, G = load(); rows = []
@@ -224,6 +290,9 @@ def run(variant):
         Ys = node_tables(N, G, list(tr_years) + [va_year], tr_years, opt.get('target', False)); VA = X[X.fy == va_year]
         per = {}
         if model == 'lr': s = run_lr(X, Ys, tr_years, va_year, opt)
+        elif model == 'dcm':
+            cfg = json.load(open(O / 'dcm_config.json'))['cfg']; years = list(tr_years) + [va_year]; inp = dcm_inputs(X, N, Ys, years, tr_years, va_year)
+            per = {f'score_s{sd}': run_dual(X, Ys, tr_years, va_year, opt, sd, cfg, inp)[0] for sd in SEEDS}; s = np.mean(list(per.values()), 0)
         else:
             per = {f'score_s{sd}': run_gnn(X, Ys, tr_years, va_year, model, opt, sd) for sd in SEEDS}; s = np.mean(list(per.values()), 0)
         rows.append(VA[['pair_id', 'fy', 'anchor', 'other', 'label']].assign(fold=f, score=s, **(per if len(SEEDS) > 3 else {})))   # 多种子时另存每个种子的分数
@@ -258,7 +327,7 @@ def evaluate():
     comps = {}
     for a, b in [('dfgt', 'M1'), ('dfgt', 'sage'), ('dfgt', 'dfgt-noaug'), ('dfgt', 'dfgt-nosim'), ('dfgt', 'dfgt-nossl'), ('dfgt0', 'dfgt'), ('dfgt-soft', 'dfgt'), ('dfgt-soft', 'dfgt-noaug'), ('dfgt0-soft', 'dfgt-soft'), ('dfgt-soft', 'M1'), ('dfgt-soft', 'sage'), ('dfgt-soft', 'dfgt-soft-nossl'), ('dfgt', 'dfgt-nograph'), ('dfgt-nograph', 'M1'),
                  ('dfgt+T', 'dfgt'), ('dfgt0+T', 'dfgt'), ('M1+T', 'M1'), ('sage+T', 'sage'), ('M1+scores', 'M1'),
-                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
+                 ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('dcm', 'dfgt+port+fine+il'), ('dcm', 'M1+il'), ('dcm', 'dcm-noA'), ('dcm', 'dcm-noB'), ('dcm', 'dcm-noC'), ('dcm-noA', 'dfgt+port+fine+il'), ('dcm-noB', 'dfgt+port+fine+il'), ('dcm-noC', 'dfgt+port+fine+il'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf')]:
         if a in vs and b in vs and (not A.only or f'{a}:{b}' in A.only.split(',')):
             comps[f'{a} − {b}'] = {g: ci(lambda U, a=a, b=b, g=g: mean(a, g)(U) - mean(b, g)(U)) for g in ('all', 'low', 'high', 'iso')}
             comps[f'{a} − {b}']['gap_reduction'] = ci(lambda U, a=a, b=b: gap(b)(U) - gap(a)(U))
@@ -294,3 +363,4 @@ if torch is not None:
     if A.device != 'cpu': torch.set_default_device(A.device)
 if A.cmd == 'run': run(A.variant)
 elif A.cmd == 'eval': evaluate()
+elif A.cmd == 'tune-dcm': tune_dcm()
