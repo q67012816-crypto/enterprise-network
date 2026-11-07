@@ -168,6 +168,9 @@ def run_model(model, x, edges, deg, TR, VA, TE, seed):
         m = SAGE(x.shape[1], 128); prep = lambda Y: SAGE.prepare(None, Y); lr = 1e-2
     elif base == 'dfgt':
         km = fit_kmeans({0: Yf}, years=(0,)); m = DFGTDev(x.shape[1], aug=True); prep = lambda Y: dfgt_prepare_dev(Y, km); lr, lam = 3e-3, 0.1
+    elif base in ('gcn', 'gat', 'gcn-nograph', 'gat-nograph'):   # 第 20.2 节：PyG 官方层，不调参
+        from pyg_models import PygGNN
+        m = PygGNN(x.shape[1], 128, kind=base[:3], nograph=base.endswith('nograph')); prep = m.prepare; lr = 1e-2
     else:
         cfg = json.load(open(KR_CFG / f"base_config_{'coldbrew' if base == 'coldbrew2' else base}.json"))['cfg']
         m = BASELINES[base](x.shape[1], hid=cfg['hid']); prep = m.prepare; lr, lam, fair, two = cfg['lr'], 1., base == 'degfair', base == 'coldbrew2'
@@ -290,6 +293,10 @@ def eval_c():
             for bl in ('gae', 'coldbrew', 'coldbrew2', 'degfair', 'tailgnn'):
                 if bl in W: diffs[f'{bl} − dfgt'] = (bl, 'dfgt'); diffs[f'{bl} − nograph'] = (bl, 'nograph')
             if 'coldbrew2' in W and 'coldbrew' in W: diffs['coldbrew2 − coldbrew'] = ('coldbrew2', 'coldbrew')
+            for k in ('gcn', 'gat'):   # 第 20.2 节
+                if k in W and f'{k}-nograph' in W: diffs[f'{k} − {k}-nograph'] = (k, f'{k}-nograph')
+            if 'sage' in W: diffs['sage − nograph'] = ('sage', 'nograph')
+            diffs['dfgt − nograph'] = ('dfgt', 'nograph')
             D, n, grp = boot(W, diffs)
             R = dict(n=n, auc={c: {g: round(float(W.loc[m, c].mean()), 4) for g, m in grp.items() if m.any()} for c in full}, diff=D)
             if 'seal' in S:
