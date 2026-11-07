@@ -246,6 +246,85 @@ def run_seal(data, r):
     _upsert(C / 'runtime.csv', dict(data=data, r=r, model='seal', seconds=sec, gpu_mb=gpu, error='', extract_s=tex))
     print(data, r, 'seal test', round(fast_auc(TEs, out.seal.values), 4), f'{sec}s/seed {gpu}MB', flush=True)
 
+def eval_c():
+    """第 18 节的汇总：C1（q* 按验证 AUC 选、主判定 C1-a、保护条件 C1-b）、C2（基线 − DFGT / 无图对照）、C3（SEAL，只在它的测试子集上配对）。
+    bootstrap 与 evaluate() 相同：按锚聚类，1000 次，种子 20261103。输出 c/summary_c.json、c/summary_c.txt、c/rcurve_c.csv。"""
+    sys.stdout.reconfigure(encoding="utf-8")
+    VAL = pd.read_csv(C / 'val_auc.csv') if (C / 'val_auc.csv').exists() else pd.DataFrame(columns=['data', 'r', 'model', 'val_auc'])
+    G = ('all', 'low', 'high', 'iso', 'low20'); res = {}; rows = []; lines = []; key = ['pair_id', 'anchor', 'other']
+    def wauc(S, c):
+        D = S[S[c].notna()].assign(score=lambda d: d[c], pos_group='')
+        return within_metrics(D, 'score').AUC
+    def boot(W, diffs):
+        ua = np.unique(W.anchor.values); ix = {a: np.where(W.anchor.values == a)[0] for a in ua}; rng = np.random.default_rng(20261103)
+        draws = [np.concatenate([ix[a] for a in rng.choice(ua, len(ua))]) for _ in range(1000)]
+        grp = {'all': np.ones(len(W), bool), 'low': (W.mindeg <= 1).values, 'high': (W.mindeg >= 2).values, 'iso': (W.mindeg == 0).values, 'low20': (W.low20 == 1).values}
+        out = {}
+        for name, (a, b) in diffs.items():
+            d = (W[a] - W[b]).values; R = {}
+            for g, m in grp.items():
+                if not m.any(): R[g] = [None] * 3; continue
+                v = [np.nanmean(d[dr][m[dr]]) if m[dr].any() else np.nan for dr in draws]
+                R[g] = [round(float(np.nanmean(d[m])), 4), round(float(np.nanpercentile(v, 2.5)), 4), round(float(np.nanpercentile(v, 97.5)), 4)]
+            out[name] = R
+        return out, {g: int(m.sum()) for g, m in grp.items()}, grp
+    for data in ('Cora', 'CiteSeer', 'Photo'):
+        for r in RS:
+            fa = OUT / f'{data}_r{r:.1f}.csv'; tag = f'_{data}_r{r:.1f}.csv'
+            if not fa.exists(): continue
+            S = pd.read_csv(fa, usecols=key + ['label', 'mindeg', 'low20', 'M1', 'sage', 'dfgt', 'nograph'])
+            for f in sorted(C.glob('*' + tag)):
+                mn = f.name[:-len(tag)]; S = S.merge(pd.read_csv(f, usecols=key + [mn]), on=key, how='left')
+            for b in ('dfgt', 'sage'):   # q* 按验证集全部组 AUC 选
+                v = VAL[(VAL.data == data) & (VAL.r == r) & VAL.model.isin([f'{b}-ed10', f'{b}-ed30'])]
+                if len(v) == 2: qs = v.sort_values('val_auc').model.iloc[-1]; S[f'{b}-ed*'] = S[qs]; res.setdefault('q_star', {}).setdefault(data, {}).setdefault(f'{r:.1f}', {})[b] = qs
+            S['pair_id'] = S.pair_id.astype(str)
+            models = [c for c in S.columns if c not in key + ['label', 'mindeg', 'low20']]
+            pos = S[S.label == 1].set_index('pair_id')
+            full = [c for c in models if c != 'seal']
+            W = pd.concat([wauc(S, c).rename(c) for c in full], axis=1).join(pos[['anchor', 'mindeg', 'low20']])
+            diffs = {}
+            for b in ('dfgt', 'sage'):
+                for q in ('ed10', 'ed30', 'ed*'):
+                    if f'{b}-{q}' in W: diffs[f'{b}-{q} − nograph'] = (f'{b}-{q}', 'nograph'); diffs[f'{b}-{q} − {b}'] = (f'{b}-{q}', b)
+            for bl in ('gae', 'coldbrew', 'coldbrew2', 'degfair', 'tailgnn'):
+                if bl in W: diffs[f'{bl} − dfgt'] = (bl, 'dfgt'); diffs[f'{bl} − nograph'] = (bl, 'nograph')
+            if 'coldbrew2' in W and 'coldbrew' in W: diffs['coldbrew2 − coldbrew'] = ('coldbrew2', 'coldbrew')
+            D, n, grp = boot(W, diffs)
+            R = dict(n=n, auc={c: {g: round(float(W.loc[m, c].mean()), 4) for g, m in grp.items() if m.any()} for c in full}, diff=D)
+            if 'seal' in S:
+                Ss = S[S.seal.notna()]; Ws = pd.concat([wauc(Ss, c).rename(c) for c in ('seal', 'dfgt', 'nograph', 'M1')], axis=1).join(pos[['anchor', 'mindeg', 'low20']])
+                Ds, ns, gs = boot(Ws, {'seal − dfgt': ('seal', 'dfgt'), 'seal − nograph': ('seal', 'nograph'), 'seal − M1': ('seal', 'M1')})
+                R['seal_subset'] = dict(n=ns, auc={c: {g: round(float(Ws.loc[m, c].mean()), 4) for g, m in gs.items() if m.any()} for c in ('seal', 'dfgt', 'nograph', 'M1')}, diff=Ds)
+            res.setdefault(data, {})[f'{r:.1f}'] = R
+            for g in G:
+                row = dict(data=data, r=r, group=g, n=n[g], **{c: R['auc'][c].get(g) for c in full})
+                for k, v in D.items():
+                    e, lo, hi = v[g]; kk = k.replace(' − ', '_minus_'); row[kk], row[kk + '_lo'], row[kk + '_hi'] = e, lo, hi
+                rows.append(row)
+            e = D.get('dfgt-ed* − nograph', {}).get('iso'); e2 = D.get('dfgt-ed* − dfgt', {}).get('iso')
+            lines.append(f"{data:9s} r={r:.1f} q*={res.get('q_star', {}).get(data, {}).get(f'{r:.1f}', {}).get('dfgt')}  iso: DFGT-ED*−nograph {e}  DFGT-ED*−DFGT {e2}  all: DFGT-ED*−DFGT {D.get('dfgt-ed* − dfgt', {}).get('all')}")
+    # C1 判定
+    per, part = {}, {}
+    for data in ('Cora', 'Photo'):
+        ok, imp = [], []
+        for r in ('0.1', '0.2', '0.3', '0.4', '0.5'):
+            d = res.get(data, {}).get(r, {}).get('diff', {})
+            if 'dfgt-ed* − nograph' not in d: continue
+            e, lo, hi = d['dfgt-ed* − nograph']['iso']; ok.append(bool((lo <= 0 <= hi) or e >= -.01))
+            imp.append(bool(d['dfgt-ed* − dfgt']['iso'][1] > 0))
+        per[data] = dict(n_r=len(ok), pass_r=sum(ok), improve_r=sum(imp))
+    full_ok = all(v['n_r'] == 5 for v in per.values())
+    verdict = ('supported' if full_ok and all(v['pass_r'] == 5 for v in per.values()) else
+               'partially supported' if full_ok and all(v['improve_r'] >= 4 for v in per.values()) else 'not supported' if full_ok else 'incomplete')
+    viol = [f'{data} r={r}' for data in res if data in ('Cora', 'CiteSeer', 'Photo') for r, R in res[data].items()
+            if 'dfgt-ed* − dfgt' in R['diff'] and R['diff']['dfgt-ed* − dfgt']['all'][2] < 0]
+    res['C1_verdict'] = dict(C1a=verdict, per_data=per, C1b_violations=viol)
+    json.dump(res, open(C / 'summary_c.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    pd.DataFrame(rows).to_csv(C / 'rcurve_c.csv', index=False)
+    txt = '\n'.join(lines) + '\n' + json.dumps(res['C1_verdict'], ensure_ascii=False, indent=1)
+    open(C / 'summary_c.txt', 'w', encoding='utf-8').write(txt); print(txt)
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('cmd'); ap.add_argument('--data'); ap.add_argument('--r', type=float); ap.add_argument('--seeds', type=int, default=10); ap.add_argument('--models', default='')
     ap.add_argument('--device', default='cuda'); A = ap.parse_args()
@@ -254,3 +333,4 @@ if __name__ == '__main__':
     elif A.cmd == 'eval': evaluate()
     elif A.cmd == 'run-c': run_c(A.data, A.r, A.seeds, A.models.split(','))
     elif A.cmd == 'run-seal': run_seal(A.data, A.r)
+    elif A.cmd == 'eval-c': eval_c()

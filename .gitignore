@@ -23,3 +23,5 @@ linkpred/out_dev/career_feats.csv
 linkpred/out_dev/majorstock_feats.csv
 linkpred/bench/raw/
 linkpred/bench/out/*_r*.csv
+linkpred/bench/out/c/*_r*.csv
+linkpred/bench/out/c/*.log
