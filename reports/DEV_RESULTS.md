@@ -876,3 +876,8 @@ NCN、BUDDY 和补充数据集没有批准，不做。不碰测试年，不改 P
 - **Cora、CiteSeer：** 所有模型每个种子 0.2–9 秒。
 - **韩国数据：** coldbrew2 每折 2–5 秒，SEAL 每折 14–38 秒（不含一次性的子图提取）。
 - 全部数字见 `bench/out/c/runtime.csv` 和 `out_dev_gpu10/runtime_kr.csv`。
+
+## 19. 修订 A8 冻结前的三个阻塞项（2026-11-08；Mingsen 要求，经会话 local_a4440409 转达；A8 尚未冻结）
+- **确认运行脚本：** `linkpred/src/paper_confirm.py`（提交 96f1deb、3e7c1cb）。覆盖 A8 第 5.3 节全部 13 个模型，另加 `dfgt+ile`（S3）、`M1+il-lenient`、`M1-noindmkt`（敏感性）。在开发年上演练（训练 2019–2021、验证 2022、“测试” 2023），输出 `linkpred/out_confirm_dryrun/`（manifest 和两条评估命令的输出已提交；分数文件不提交）。演练结果不进入任何检验或报告。
+- **负例随机流的回归检查：** 用当前代码重建 data_v3x 到临时目录，点对、早已存在点对、节点、合格名单、全部特征图逐字节一致，10 项单元检查通过；`history_undirected.csv` 只有行顺序不同（集合迭代顺序），内容相同。2027 年的门槛脚本：`linkpred/src/check_v3_regress.py`。
+- **代码与环境：** 18f7bbe 之后对 `paper_dev.py` 的修改都是新增的：修改后的版本与 HEAD、18f7bbe、0f73e93 跑 `M1` 的输出逐字节一致。**环境发现：** 开发阶段逻辑回归分数当时是用系统 Python（scikit-learn 1.8.0）跑的，GNN 用虚拟环境 enet（scikit-learn 1.9.1）。虚拟环境重跑 `M1`、`M1+il`，单个分数最多差 .013，但 P1 的开发估计不变（低连接组 +.034，单侧下限 +.021，双侧 [+.019, +.052]，B = 10,000）。A8 草稿把虚拟环境 enet 写为冻结环境。
