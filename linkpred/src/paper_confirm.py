@@ -12,7 +12,8 @@
   - 正式模式下测试年必须是 2025，且数据中必须有该年的点对；任何模式下测试年都不能是 2024（2024→25 只作验证年）；
   - 每个 GNN 变体跑 10 个种子（1–10），测试分数 = 10 个种子的平均，另存每个种子的分数；逻辑回归只拟合一次（确定性）；
   - GNN 在验证组内 AUC 最好的一轮保存参数，训练结束后用这一组参数给测试年打分一次；
-  - 每个模型先写验证分数文件并记录 SHA256，再写测试分数文件并记录 SHA256；同时记录代码提交、源文件和数据文件的 SHA256（manifest.json）。
+  - 每个模型先写验证分数文件并记录 SHA256，再写测试分数文件并记录 SHA256；同时记录代码提交、源文件和数据文件的 SHA256（manifest.json）；
+  - 计算第 2.4 节的覆盖率（兼任、最大股东），写入 manifest.json；低于门槛时照常打分，但依赖它的检验按第 2.4 节报告为“不可解读”。
 分数文件格式与 paper_dev.py 相同（fold = 'T'），评估直接用 paper_dev.py（年份常量 GRAPH_YEARS 须包含测试年）：
       python src/paper_dev.py eval --out <out> --boot 10000 --only "M1+il:M1,dfgt:M1" --gaps dfgt --save confirm_eval_boot10000.json
       python src/paper_dev.py eval --out <out> --boot 1000 --save confirm_eval_boot1000.json"""
@@ -79,6 +80,15 @@ man = dict(mode='dry-run' if A.dry_run else 'confirm', years=Y, seeds=SEEDS, mod
            data_sha256={p.name: sha(p) for p in sorted(PD.D.glob('*.csv'))},
            feature_sha256={p.name: sha(p) for p in sorted(PD.FE.glob('*_feats*.csv'))}, files={})
 def save_manifest(): json.dump(man, open(OUT / 'manifest.json', 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+save_manifest()
+
+# 第 2.4 节的覆盖率门槛：全部点对中两端都有可用数据的比例。门槛 = 三个开发验证年（2021–2023）最低值的一半（兼任 .643 → .32；最大股东 .638 → .32）
+COV = dict(interlock=('interlock_feats.csv', 'il_has_a', 'il_has_o', .643 / 2), hyslr=('hyslr_feats.csv', 'hs_has_a', 'hs_has_o', .638 / 2))
+for k, (f, a_, b_, thr) in COV.items():
+    F = pd.read_csv(PD.FE / f, index_col='row', usecols=['row', a_, b_]).reindex(X.index); c = ((F[a_] == 1) & (F[b_] == 1)).groupby(X.fy).mean()
+    man.setdefault('coverage', {})[k] = dict(threshold=round(thr, 4), by_fy={int(t): round(float(v), 4) for t, v in c.items()},
+                                           test_year_ok=bool(c.get(Y['test'], 0) >= thr))
+    print('coverage', k, man['coverage'][k]['by_fy'], 'test year ok' if man['coverage'][k]['test_year_ok'] else f'TEST YEAR BELOW THRESHOLD {thr:.3f}: dependent tests are "not interpretable" (A8 sec. 2.4)', flush=True)
 save_manifest()
 
 VA, TE = X[X.fy == Y['val']], X[X.fy == Y['test']]; cols = ['pair_id', 'fy', 'anchor', 'other', 'label']
