@@ -909,3 +909,18 @@ NCN、BUDDY 和补充数据集没有批准，不做。不碰测试年，不改 P
 - **部分稳健：** 单侧 95% 下限 > 0，但点估计 < 原结果的 75%。
 - **不稳健：** 单侧 95% 下限 ≤ 0。
 - 如果是“不稳健”，先告诉 Mingsen，不改论文；是否给 A8 追加“只报告”的修订由 Mingsen 决定。
+
+### 20.2 第 2 组：受控孤立实验的普遍性（只报告，**写于运行之前**）
+**目的：** 回应“孤立组上图模型低于无图对照，是 DFGT 稠密实现特有的问题”。
+- **模型：** PyG 官方层实现的 GCN（`GCNConv`）和 GAT（`GATConv`），都加自环；各自的无图对照 = 同一网络、去掉所有边（只剩自环，等价于逐节点 MLP）。2 层，hidden 128（GAT：第一层 4 头 × 32 拼接，第二层 1 头 128），dropout 0.3，ReLU（GAT 用 ELU），与 SAGE 相同的 MLP 解码器；lr 1e-2；其余训练设置与实验 A 的 GNN 相同（20 个训练负例，patience 15，最多 150 轮）。不调参。新代码：`linkpred/src/pyg_models.py`，在 `bench.py` 中加入模型名 `gcn`、`gat`、`gcn-nograph`、`gat-nograph`。
+- **数据和划分：** Cora、CiteSeer、Photo，实验 A 的同一套划分、评估和 bootstrap（按锚聚类，1000 次，种子 20261103），r ∈ {0, 0.1, …, 0.5}，10 个种子。
+- **事先写明的比较对象（只报告点估计和 95% 区间，不判定）：** 孤立组、低连接组、全部组的 GCN − GCN 无图、GAT − GAT 无图；并列报告实验 A 已有的 DFGT − 无图（DFGT 架构）和 SAGE − 无图。
+- **DegFairGT 官方代码（DGL）：** 需要从外部下载代码并安装 DGL，先征得 Mingsen 许可。如果许可了，在 Photo（以及 Cora）的孤立设置上至少跑 r = 0.3，比较对象同上（官方 DegFairGT − 无图对照）；装不上或超出 8 GB 显存，记录原因后跳过。
+
+### 20.3 第 3 组：基线公平性（只报告，**写于运行之前**）
+**DFGT 和 GraphSAGE 的小网格调参（开发阶段敏感性分析；A8 冻结的超参数不变）：**
+- **网格：** 与新基线完全相同的 4 个配置：hidden {64, 128} × lr {1e-3, 1e-2}（DFGT 原设置 hidden 64、lr 3e-3 不在网格内；SAGE 原设置 hidden 128、lr 1e-2 在网格内）。其余设置不变。
+- **选择：** 与新基线相同，只用 F1、F2，3 个种子，按全部组验证组内 AUC（种子分数平均后）的两折均值选。
+- **重跑：** 选出的配置跑三折 × 10 个种子，变体名 `dfgt-tuned`、`sage-tuned`。新代码放在 `linkpred/src/dev_tune.py`（调用冻结的 `paper_dev.py`，不修改它）。
+- **报告：** 每个新基线（GAE、Cold Brew、Cold Brew 两阶段、DegFairGNN、Tail-GNN、SEAL）− DFGT 在低连接组和孤立组的差，调参前后各一列（B = 1,000）；标出点估计符号改变、或显著性改变（区间是否含 0）的格子。同样报告 sage-tuned − sage、dfgt-tuned − dfgt。
+**官方代码的可行性（Cold Brew、Tail-GNN、DegFairGNN、SEAL）：** 同样需要从外部下载代码，先征得 Mingsen 许可。许可后逐个评估能否在本环境（Windows、PyTorch 2.15、8 GB）装上并接入韩国数据；可行的至少在韩国数据的低连接组和孤立组上与重写版本比较。不可行的记录原因。
