@@ -22,6 +22,10 @@ except ImportError: torch = None
 L = Path(__file__).resolve().parents[1]; P0 = L.parent; D = L / 'data_v3x'; FE = O = L / 'out_dev'   # FE：点对特征文件所在目录；O：分数输出目录（可用 --out 改）
 FOLDS = {'F1': ((2019, 2020), 2021), 'F2': ((2019, 2020, 2021), 2022), 'F3': ((2019, 2020, 2021, 2022), 2023)}
 SEEDS = [1, 2, 3]
+# 年份常量（修订 A8 第 5.3 节：冻结后只允许改这些常量和路径）。开发阶段：持股图 2019–2024；点对特征在 fy ≥ 2024 的行上置 0（这些年份没有计算）。
+# paper_confirm.py 在确认运行时按自己的年份设置覆盖这两个值。
+GRAPH_YEARS = range(2019, 2025)
+PF_ZERO_FROM = 2024
 VARIANTS = {   # 名称: (模型, 选项)
     'M1': ('lr', dict(C=0.1, target=False, scores=False)), 'M1+scores': ('lr', dict(C=10, target=False, scores=True)),
     'M1+T': ('lr', dict(C=0.1, target=True, scores=False)),
@@ -70,7 +74,8 @@ VARIANTS = {   # 名称: (模型, 选项)
     # 第 18.1 节：训练时的节点级边丢弃（每个训练年 G_t 中比例 q 的度 > 0 节点不参与消息传递，训练正例不变；验证年用完整 G_t）
     'dfgt-ed10': ('dfgt', dict(target=False, ed=0.1)), 'dfgt-ed30': ('dfgt', dict(target=False, ed=0.3)),
     'sage-ed10': ('sage', dict(target=False, ed=0.1)), 'sage-ed30': ('sage', dict(target=False, ed=0.3)), 'degfair': ('base', dict(name='degfair')), 'tailgnn': ('base', dict(name='tailgnn')),
-    'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),   # 敏感性：保留 C_t 后才提交的更正年报
+    'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),
+    'M1-noindmkt': ('lr', dict(C=0.1, target=False, scores=False, noindmkt=True)),   # 修订 A8 第 2.1 节的敏感性：M1 不含行业和市场   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
     'dfgt+pf': ('dfgt', dict(target=False, pf=('port', 'ind'))), 'dfgt-nograph+pf': ('dfgt', dict(target=False, aug=False, nograph=True, pf=('port', 'ind'))),
 }
@@ -92,7 +97,7 @@ def pf_matrix(X, groups, tr_years):
     cols = [c for g in groups for c in {'port': PORT, 'ind': IND, 'fine': IND[:3], 'hist': IND[3:], 'il': IL, 'il_len': IL, 'hs': HS, 'hs_len': HS, 'car': ['car_ao', 'car_oa'], 'ms': MS}[g]]; Z = F[cols].copy()
     if 'port' in groups: Z['pf_miss'] = Z.pf_size_gap.isna().astype(float)
     Z = Z.fillna(0.); tr = X.fy.isin(tr_years).values; mu, sd = Z[tr].mean(), Z[tr].std().replace(0, 1)
-    Z = (Z - mu) / sd; Z.loc[X.fy.ge(2024).values] = 0.
+    Z = (Z - mu) / sd; Z.loc[X.fy.ge(PF_ZERO_FROM).values] = 0.
     return Z.values.astype(np.float32)
 
 def sfile(v):
@@ -103,7 +108,7 @@ def load():
     """读取 data_v3x 的点对、节点、各年持股图（有向）和合格名单。"""
     X = pd.read_csv(D / 'pairs.csv', dtype={'anchor': str, 'other': str, 'pair_id': str})
     N = pd.read_csv(D / 'nodes.csv', dtype={'corp_code': str, 'industry': str, 'market': str, 'fin_disc': str}, keep_default_na=False, na_values=[''])
-    G = {t: rd(D / f'graph_{t}.csv') for t in range(2019, 2025)}
+    G = {t: rd(D / f'graph_{t}.csv') for t in GRAPH_YEARS}
     return X, N, G
 
 def target_features(G, t, ids):
@@ -161,15 +166,18 @@ def heur_scores(Y, a, o):
         out.append((np.log1p(len(c)), sum(1 / np.log(len(nb[z])) for z in c if len(nb[z]) > 1), len(c) / len(u) if u else 0., np.log1p(len(nb[i]) * len(nb[j]))))
     return np.array(out)
 
-def run_lr(X, Ys, tr_years, va_year, opt, all_logits=False):
+def run_lr(X, Ys, tr_years, va_year, opt, all_logits=False, te_year=None):
     """逻辑回归（M1 及其变体）：双方节点特征 + 同行业 + 同市场（+ 可选启发式分数），只用本折训练年拟合。
-    all_logits=True 时返回本折训练年和验证年所有点对的 logit（Series，索引同 X），供 DCM 作基础分数。"""
+    all_logits=True 时返回本折训练年和验证年所有点对的 logit（Series，索引同 X），供 DCM 作基础分数。
+    te_year 不为 None 时（确认运行）：返回（验证年分数，测试年分数）；拟合仍只用训练年。
+    opt['noindmkt']：敏感性版本，去掉双方的行业 / 市场 one-hot 和同行业 / 同市场两项。"""
     def design(df):
         rows = []
         for t, g in df.groupby('fy'):
             Y = Ys[t]; a = np.array([Y['idx'][c] for c in g.anchor]); o = np.array([Y['idx'][c] for c in g.other]); F = Y['F']
             ind = F[:, 20:41].argmax(1); mk = F[:, 41:43].argmax(1) + 10 * (F[:, 41:43].sum(1) == 0)
             Z = [Y['x'][a], Y['x'][o], (ind[a] == ind[o])[:, None], (mk[a] == mk[o])[:, None]]
+            if opt.get('noindmkt'): keep = np.r_[0:20, 43:Y['x'].shape[1]]; Z = [Y['x'][a][:, keep], Y['x'][o][:, keep]]
             if opt['scores']: Z.append(heur_scores(Y, a, o))
             if opt.get('pf'): Z.append(PF[g.index.values])
             rows.append(pd.DataFrame(np.hstack(Z), index=g.index))
@@ -180,12 +188,15 @@ def run_lr(X, Ys, tr_years, va_year, opt, all_logits=False):
     m = LogisticRegression(C=opt['C'], max_iter=5000).fit(((Zt - mu) / sd).values, TR.label.values)
     if all_logits:
         Za = pd.concat([Zt, Zv]); return pd.Series(m.decision_function(((Za - mu) / sd).values), index=Za.index)
+    if te_year is not None:
+        Ze = design(X[X.fy == te_year]); return m.predict_proba(((Zv - mu) / sd).values)[:, 1], m.predict_proba(((Ze - mu) / sd).values)[:, 1]
     return m.predict_proba(((Zv - mu) / sd).values)[:, 1]
 
-def run_gnn(X, Ys, tr_years, va_year, model, opt, seed):
-    """训练一个 GNN（SAGE 或 DFGT 变体）：本折训练年的点对，按验证组内 AUC 早停（patience 15，最多 150 轮）。"""
+def run_gnn(X, Ys, tr_years, va_year, model, opt, seed, te_year=None):
+    """训练一个 GNN（SAGE 或 DFGT 变体）：本折训练年的点对，按验证组内 AUC 早停（patience 15，最多 150 轮）。
+    te_year 不为 None 时（确认运行）：保存验证最佳一轮的参数，训练结束后用它给测试年打分一次，返回（验证分数，测试分数）。"""
     torch.manual_seed(seed); np.random.seed(seed)
-    years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}
+    years = list(tr_years) + [va_year] + ([te_year] if te_year is not None else []); xs = {t: torch.tensor(Ys[t]['x']) for t in years}
     if opt.get('nograph'): Ys = {t: dict(Y, edges=[], deg=np.zeros_like(Y['deg'])) for t, Y in Ys.items()}
     Yp = dict(Ys)   # 用于预计算（消息传递）的节点表；边丢弃只改训练年
     if opt.get('ed'):
@@ -209,21 +220,25 @@ def run_gnn(X, Ys, tr_years, va_year, model, opt, seed):
     TR, VA = X[X.fy.isin(tr_years)], X[X.fy == va_year]; PI_tr, PI_va = pair_idx(Ys, TR), pair_idx(Ys, VA)
     y = torch.tensor(X.label.values, dtype=torch.float32); ntr = len(TR)
     opt_ = torch.optim.Adam(m.parameters(), lr=lr); best, state, bad = -1, None, 0
-    def score():
+    def score(PI=PI_va, D_=VA):
         m.eval(); s = np.zeros(len(X))
         with torch.no_grad():
-            for t, (u, v, ix) in PI_va.items(): h, _ = m.embed(xs[t], Ps[t]); s[ix] = torch.sigmoid(dec(h, u, v, ix)).cpu().numpy()
-        return s[VA.index]
+            for t, (u, v, ix) in PI.items(): h, _ = m.embed(xs[t], Ps[t]); s[ix] = torch.sigmoid(dec(h, u, v, ix)).cpu().numpy()
+        return s[D_.index]
     for ep in range(1, 151):
         m.train(); opt_.zero_grad(); loss = 0.
         for t, (u, v, ix) in PI_tr.items():
             h, ssl = m.embed(xs[t], Ps[t])
             loss = loss + torch.nn.functional.binary_cross_entropy_with_logits(dec(h, u, v, ix), y[ix], reduction='sum') / ntr + lam * ssl / len(PI_tr)
         loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
-        if a > best: best, bad, state = a, 0, s
+        if a > best:
+            best, bad, state = a, 0, s
+            if te_year is not None: import copy; best_sd = copy.deepcopy(m.state_dict())
         else:
             bad += 1
             if bad >= 15: break
+    if te_year is not None:
+        TE = X[X.fy == te_year]; m.load_state_dict(best_sd); return state, score(pair_idx(Ys, TE), TE)
     return state
 
 def dcm_inputs(X, N, Ys, years, tr_years, va_year):
@@ -334,6 +349,19 @@ def tune_dcm():
     json.dump(dict(cfg=cfg, cfg_index=k, mean_val_auc_F1F2=round(float(M.max()), 4), rule='mean all-group val AUC on F1, F2; 3 seeds'), open(O / 'dcm_config.json', 'w'), indent=1)
     print('selected', k, cfg, round(float(M.max()), 4)); print(M.round(4).to_string())
 
+def add_interlock_edges(G, N, mode):
+    """把 FY t 的兼任边并入 G_t（只保留两端都是当年合格企业的边，不新增节点）；评估时的度分组仍按持股图。mode：'all' 或 'inside'。"""
+    from interlock_feats import interlock_edges
+    IE = interlock_edges(); G = dict(G)
+    for t in IE:
+        if t not in G: continue
+        el = set(N[N.fy == t].corp_code); e = IE[t]
+        if mode == 'inside': e = e[e.inside == 1]
+        e = e[e.src.isin(el) & e.dst.isin(el)]
+        G[t] = pd.concat([G[t], e[['src', 'dst']]], ignore_index=True)
+        print('FY', t, 'interlock edges added', len(e), flush=True)
+    return G
+
 def run(variant):
     """跑一个变体：3 折 ×（逻辑回归 1 次 / GNN 3 个种子取平均分数），保存验证分数。"""
     model, opt = VARIANTS[variant]; X, N, G = load(); rows = []; RT.clear()
@@ -341,16 +369,7 @@ def run(variant):
         S = [pd.read_csv(O / sfile(p), dtype={'anchor': str, 'other': str, 'pair_id': str}) for p in opt['parts']]
         out = S[0].drop(columns='score').assign(score=np.mean([s_.groupby('fy').score.rank(pct=True).values for s_ in S], 0))
         out.to_csv(sfile(variant), index=False); print(variant, 'written'); return
-    if opt.get('ile'):   # 把 FY t 的兼任边并入 G_t（只保留两端都是当年合格企业的边，不新增节点）；评估时的度分组仍按持股图
-        from interlock_feats import interlock_edges
-        IE = interlock_edges(); G = dict(G)
-        for t in IE:
-            if t not in G: continue
-            el = set(N[N.fy == t].corp_code); e = IE[t]
-            if opt['ile'] == 'inside': e = e[e.inside == 1]
-            e = e[e.src.isin(el) & e.dst.isin(el)]
-            G[t] = pd.concat([G[t], e[['src', 'dst']]], ignore_index=True)
-            print('FY', t, 'interlock edges added', len(e), flush=True)
+    if opt.get('ile'): G = add_interlock_edges(G, N, opt['ile'])
     for f, (tr_years, va_year) in FOLDS.items():
         Ys = node_tables(N, G, list(tr_years) + [va_year], tr_years, opt.get('target', False)); VA = X[X.fy == va_year]
         per = {}
@@ -401,7 +420,7 @@ def evaluate():
     for a, b in [('dfgt', 'M1'), ('dfgt', 'sage'), ('dfgt', 'dfgt-noaug'), ('dfgt', 'dfgt-nosim'), ('dfgt', 'dfgt-nossl'), ('dfgt0', 'dfgt'), ('dfgt-soft', 'dfgt'), ('dfgt-soft', 'dfgt-noaug'), ('dfgt0-soft', 'dfgt-soft'), ('dfgt-soft', 'M1'), ('dfgt-soft', 'sage'), ('dfgt-soft', 'dfgt-soft-nossl'), ('dfgt', 'dfgt-nograph'), ('dfgt-nograph', 'M1'),
                  ('dfgt+T', 'dfgt'), ('dfgt0+T', 'dfgt'), ('M1+T', 'M1'), ('sage+T', 'sage'), ('M1+scores', 'M1'),
                  ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('gae', 'dfgt'), ('gae', 'dfgt-nograph'), ('gae', 'sage'), ('coldbrew', 'dfgt'), ('coldbrew', 'dfgt-nograph'), ('coldbrew', 'sage'), ('degfair', 'dfgt'), ('degfair', 'dfgt-nograph'), ('degfair', 'sage'), ('tailgnn', 'dfgt'), ('tailgnn', 'dfgt-nograph'), ('tailgnn', 'sage'), ('dcm', 'dfgt+port+fine+il'), ('dcm', 'M1+il'), ('dcm', 'dcm-noA'), ('dcm', 'dcm-noB'), ('dcm', 'dcm-noC'), ('dcm-noA', 'dfgt+port+fine+il'), ('dcm-noB', 'dfgt+port+fine+il'), ('dcm-noC', 'dfgt+port+fine+il'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf'),
-                 ('dfgt-ed10', 'dfgt'), ('dfgt-ed30', 'dfgt'), ('dfgt-ed10', 'dfgt-nograph'), ('dfgt-ed30', 'dfgt-nograph'), ('sage-ed10', 'sage'), ('sage-ed30', 'sage'), ('coldbrew2', 'dfgt'), ('coldbrew2', 'dfgt-nograph'), ('coldbrew2', 'coldbrew'), ('seal', 'dfgt'), ('seal', 'dfgt-nograph'), ('seal', 'sage'), ('seal', 'M1')]:   # 第 18 节 C1–C3
+                 ('dfgt-ed10', 'dfgt'), ('dfgt-ed30', 'dfgt'), ('dfgt-ed10', 'dfgt-nograph'), ('dfgt-ed30', 'dfgt-nograph'), ('sage-ed10', 'sage'), ('sage-ed30', 'sage'), ('coldbrew2', 'dfgt'), ('coldbrew2', 'dfgt-nograph'), ('coldbrew2', 'coldbrew'), ('seal', 'dfgt'), ('seal', 'dfgt-nograph'), ('seal', 'sage'), ('seal', 'M1'), ('M1-noindmkt', 'M1')]:   # 第 18 节 C1–C3；最后一项为 A8 敏感性
         if a in vs and b in vs and (not A.only or f'{a}:{b}' in A.only.split(',')):
             comps[f'{a} − {b}'] = {g: ci(lambda U, a=a, b=b, g=g: mean(a, g)(U) - mean(b, g)(U)) for g in ('all', 'low', 'high', 'iso')}
             comps[f'{a} − {b}']['gap_reduction'] = ci(lambda U, a=a, b=b: gap(b)(U) - gap(a)(U))
