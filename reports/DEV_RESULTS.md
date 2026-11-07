@@ -948,3 +948,17 @@ NCN、BUDDY 和补充数据集没有批准，不做。不碰测试年，不改 P
 - 有任何兼任信号的正例比例：主版本 6.2% → 5.5%（低连接正例 7.5% → 6.6%，孤立正例 7.4% → 6.7%）；严格版本 6.2% → 4.7%。
 
 **解读：** 排除可能在 t 年 12 月 31 日之后上任的人后，兼任对低连接企业的帮助保留约四分之三以上，下限仍为正；GNN 版几乎不变。按事先写定的标准，结论是“稳健”。由于保留比例（76.4%）离门槛很近，论文中应同时报告这一数字。代码：`linkpred/src/interlock_tenure.py`；输出：`linkpred/out_dev_tenure_{ref,main,strict}/`（评估结果已提交，分数和特征文件不提交）。
+
+### 20.5 第 3 组补充：官方代码的可行性与对比设计（Mingsen 批准下载，2026-11-08；**写于运行之前**）
+官方代码浅克隆到 `D:\claude data\official_code\`（仓库外，不改动；提交号：DegFairGT/CGT 948f254、Cold Brew e6f85ee、Tail-GNN ce0d350、DegFairGNN 5afdf60、SEAL_OGB ea01ef5）。冻结的虚拟环境 enet 不安装任何新包。
+**可行性：**
+- **DegFairGT**（论文给出的代码仓库是 NSLab-CUK/Community-aware-Graph-Transformer）：只有节点分类和聚类，没有链路预测；依赖 DGL 1.1 + CUDA 11.7（Linux conda 环境），DGL 不支持本机的 torch 2.15 / Windows。**不可行，跳过**（第 20.2 节中官方 DegFairGT 的受控孤立实验也因此跳过）。
+- **DegFairGNN**（ntkien1904/DegFairGNN）：只有节点分类，依赖 DGL 和 torch 1.7。**不可行，跳过。**
+- **Cold Brew**（amazon-science/gnn-tail-generalization）：有链路预测代码，但实际使用 `torch_sparse.SparseTensor`（torch 2.15 没有对应的 wheel）并依赖 DGL 0.7。**不可行，跳过。**
+- **Tail-GNN**（shuaiOKshuai/Tail-GNN）：链路预测代码只依赖 torch / numpy / scipy，可以直接导入。**可行。**
+- **SEAL**（facebookresearch/SEAL_OGB）：模块级导入了 `torch_sparse.spspmm`，但我们调用的子图提取、DRNL 标记、建图函数和 DGCNN 模型都不用它；用一个只在被调用时报错的替身模块满足导入，官方代码本身不改。**可行。**
+
+**对比设计（韩国数据，三折，只报告）：** 新代码 `linkpred/src/official_kr.py` 导入官方的模型和函数，接入我们的年度图、节点特征和点对；评估用我们的组内 AUC（101 个候选）。凡官方代码有的选择都照官方，只有下面两处按本研究统一：(1) 早停按验证年组内 AUC（官方 Tail-GNN 用 10 个候选的 MAP，SEAL 用 AUC/Hits）；(2) 节点特征用 M1 的节点特征。
+- **Tail-GNN 官方：** 官方 `TailGNN` 模型和判别器、官方损失（头图和尾图的 BPR 链路损失、对抗项 η = 1、缺失信息约束 μ = 0.001）、官方默认超参数（hidden 32，dropout 0.5，lr 0.01，weight decay 1e-4，k = 5，GCN 架构，最多 1000 轮，patience 300，每轮判别器 2 步）；尾图用官方 `link_dropout`（度 > k 的节点只保留 k 个邻居）；每个训练正例配 1 个负例（从该正例的 100 个候选负例中随机取，相当于官方的随机非邻居）；打分 = sigmoid(点积)。10 个种子。
+- **SEAL 官方：** 官方 `k_hop_subgraph`（1 跳，删除目标边）、`drnl_node_labeling`、`construct_pyg_graph` 和 `DGCNN`（hidden 32，3 层，sort-pool k = 0.6），官方默认 lr 1e-4、batch 32、最多 50 轮；训练负例 1:1（官方做法）；`use_feature = True`（我们的重写版用了节点特征）。3 个种子（子图模型耗时长）。
+- **报告：** 官方版 − 重写版（`out_dev_gpu10/scores_tailgnn.csv`、`scores_seal.csv`）以及官方版 − DFGT，在低连接组、孤立组、全部组的点估计和 95% 区间（B = 1,000，与 `paper_dev.py eval` 相同的聚类 bootstrap）。不判定。
