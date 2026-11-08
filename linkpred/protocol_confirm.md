@@ -331,3 +331,81 @@ Original text (protocol.md): S1 图方法相对 M1 的 AP 差，95% 区间不含
 
 本修订由执行者（Claude）根据 Mingsen Zhang 的决定起草。
 <!-- A8.1 END -->
+
+- **2026-11-08 21:58 (KST)，修订 A8.2：确认年正例按首次取得日与预测日分组报告（只报告，不判定）。Mingsen Zhang 决定追加（2026-11-08，经论文会话转达，原话：“Add A8.2”）。**
+  - 追加在 A8.1 之后；A8 和 A8.1 的冻结文本未作任何改动（SHA-256 仍为 `fe963407c992087bb94b4a9c78d98dc8af5e3c474250291960b3564c4c9c68f0` 和 `9be99ababeeb070e13292fc50577c59f31b80d5bc4a4d85ebe4db66f2d842f59`）。
+  - 代码提交：`88c64e7b602a561b2c5ac73608f0e6a39b539e79`（分支 `claude/v3-dev-interlocks`）；新增 `linkpred/src/confirm_datesplit.py`、`linkpred/src/date_rules.py`。A8 和 A8.1 冻结的文件均未改动。
+  - 追加文本的 SHA-256（`<!-- A8.2 BEGIN -->` 下一行起、`<!-- A8.2 END -->` 之前，UTF-8，LF 换行）：`c70866484fa746f837fd7cda025f8fe788b3d800be207a6fe0beb24d674a1d0e`
+  - 本修订所在的提交打标签 `protocol-amend-A8-2`。之后不再修改，只能再追加带日期的修订。
+
+<!-- A8.2 BEGIN -->
+## 修订 A8.2：确认年正例按首次取得日与预测日分组报告（只报告，不判定）
+**1. 来由和时间顺序（如实记录）**
+- 问题：预测日是 C_t（t+1 年 4 月 30 日），但正例覆盖 t+1 整个财年的新关系，其中一部分在 C_t 之前就已取得。
+- 开发阶段的经过：
+  - 先由论文会话做了一次只读的探索性检查；
+  - 之后由执行者做了正式分析，定义和判读标准写于运行之前（DEV_RESULTS 第 21.1 节，提交 `f54ec86`），结果见第 21.5 节（提交 `2f38f97`）。
+- 开发阶段的结果：575 个开发正例中，C_t 之后取得的 384 个（66.8%），之前取得的 163 个（28.3%），日期不明的 28 个。在 C_t 之后的子集上，M1+il − M1 低连接组为 +.025 [+.008, +.044]，单侧下限 +.010，是全样本 +.034 的 72.2%，判读为“方向一致但减弱”。
+- **本修订是在看过上述探索性结果和正式结果之后才加的。** Mingsen Zhang 决定追加（2026-11-08，经论文会话转达，原话：“Add A8.2”）。
+- 追加时，2027 年的确认数据（FY2025→26）尚未收集，测试年没有任何数据或结果。
+
+**2. 只报告，不判定**
+- 本修订只增加一项报告。P1、S_iso、C1/C2 的判定、修订 A8.1，以及第 1–9 节的其余所有规则都不变。冻结运行（`paper_confirm.py`，输出 `out_confirm`）的命令、输出和评估也都不变。
+- 本节的结果不改变任何检验的结论，不作为 P1 的替代或附加条件，也不设判读阈值。
+- 如果冻结运行中兼任数据的测试年覆盖率低于第 2.4 节门槛（依赖兼任的检验为“不可解读”），本节的兼任比较同样标为“不可解读”，但照常报告数字。
+
+**3. 分类规则（与 DEV_RESULTS 第 21.1 节相同；代码 `linkpred/src/date_rules.py`）**
+- **用哪些出资行：** 只用 `build_v3.py` 自己用来生成这条正边的 t+1 年出资行，名称解析、曾用名、as-of 和合格性规则都与构建时相同。点对的所有方向都算，所以互相持股时两个方向的行都用。
+- **如何重建：** 在本进程内执行确认运行时的 `build_v3.py`（按第 5.3 节只改年份常量的版本，参数 `--first-year 2019`）。重建的 `pairs.csv` 必须与确认数据目录中的 `pairs.csv` 逐字节相同，也必须与冻结运行 `manifest.json` 记录的 SHA-256 相同；否则停止，本节报告“无法执行”及原因。
+- **每一行：**
+  - 用 `build_v3.py` 自己的 `parse_date` 解析首次取得日 `frst_acqs_de`。
+  - t+1 财年区间 (start, end] 按 `row_newness` 的口径由结算日推出；结算日缺失时按 12 月 31 日。
+  - 分为六类：
+    - `before`：start < d ≤ C_t；
+    - `after`：C_t < d ≤ end；
+    - `earlier`：d ≤ start；
+    - `later`：d > end；
+    - `year_only`：只有年份，且年份 = t+1；只有年份但不是 t+1 的，按年份归入 `earlier` 或 `later`；
+    - `missing`：无法解析。
+  - 12 月结算的公司，`before` 就是 1 月 1 日至 C_t。
+- **每个正例：**
+  - 只要有任一行是 `before`，就归 **before**（C_t 之前取得）。
+  - 否则只要有任一行是 `after`，就归 **after**（C_t 之后取得）。
+  - 否则归 **unknown**（日期不明或没有对应的行），内部按 `earlier` > `later` > `year_only` > `missing` > `no_row` 细分。
+- 确认年 t = 2025，C_t = 2026-04-30。
+
+**4. 报告**
+- 测试年正例在各类别（含 unknown 的细分）的人数，分全部、低连接（≤ 1）、孤立（= 0）三组。
+- 在 after 子集上报告以下比较，before 和 unknown 子集及全样本并列报告：
+  - M1+il − M1（P1 对应的比较）：低连接组、孤立组（S_iso）、全部组，B = 10,000；
+  - C3′（dfgt+port+fine+il − dfgt+port+fine，10 个种子的平均分数）：三组，B = 1,000。
+- 每项都报告点估计、双侧 95% 区间和单侧 95% 下限。区间用 `numpy.default_rng(20261103)`，与 P1 相同的“折 × 投资方”聚类，在子集内重抽；子集为空时报告“无”。
+- 另报告 after 子集低连接组相对全样本的保留比例（描述性）。
+- 度与 `paper_dev.evaluate` 相同：测试年 `graph_t.csv` 上的 `Counter(src + dst)`。
+- **不重新训练。** 只用冻结运行的测试分数（`scores_M1.csv`、`scores_M1+il.csv`、`scores_dfgt+port+fine.csv`、`scores_dfgt+port+fine+il.csv`），先按冻结运行 `manifest.json` 中的 SHA-256 核对。
+
+**5. 运行顺序和命令**
+- 在冻结运行（第 9 节的单条命令）和它的两条评估命令完成之后运行；与修订 A8.1 的先后顺序不限。
+- 本节不读取冻结运行之外的分数，也不改写冻结运行的任何输出。
+- 命令：
+  ```
+  python src/confirm_datesplit.py --data <2027 年的数据目录> --ref out_confirm
+  ```
+- 输出写到 `linkpred/out_confirm_datesplit/`（`datesplit.json`、`positives.csv`、`manifest.json`）。`manifest.json` 记录代码提交、源文件和所用冻结分数的 SHA-256。
+- 输出目录中已有结果时，脚本拒绝运行（只运行一次）。测试年不能是 2024。
+
+**6. 代码与回归检查**
+- 新代码：
+  - `linkpred/src/confirm_datesplit.py`；
+  - `linkpred/src/date_rules.py`：从开发阶段的 `label_audit.py` 原样移出的分类规则，`label_audit.py` 改为导入它。
+- 第 5.3 节冻结的 11 个文件与 `3e7c1cb` 逐字节相同；修订 A8.1 的代码（`confirm_tenure.py`、`tenure_rules.py`）与 `9921e38` 逐字节相同。冻结运行的输出不受影响。
+- 回归检查（2026-11-08）：
+  - 移动规则后重跑 `label_audit.py`，`label_audit.json`（SHA-256 `bfdbed3d…60ef5`）和每个正例的类别文件（`30058df2…f560c`）与之前逐字节相同。
+  - 演练：只用开发年，与 `paper_confirm.py --dry-run` 年份相同，“测试”年为 2023，基准为 `out_confirm_dryrun`。
+    - 重建的 `pairs.csv` 与 `data_v3x` 逐字节相同。
+    - 全样本 M1+il − M1 与冻结演练的评估结果（`confirm_eval_boot10000.json`）完全相同，包括点估计、区间和单侧下限。
+    - “只运行一次”的拒绝已验证。
+    - 演练结果只用来检查流程，不进入任何报告。
+
+本修订由执行者（Claude）根据 Mingsen Zhang 的决定起草。
+<!-- A8.2 END -->
