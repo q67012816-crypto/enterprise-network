@@ -28,34 +28,16 @@ ROWS, parse_date, num = ns['ROWS'], ns['parse_date'], ns['num']
 X = pd.read_csv(DATA / 'pairs.csv', dtype={'anchor': str, 'other': str, 'pair_id': str, 'directions': str})
 POS = X[X.label == 1].set_index('pair_id')
 
-def fy_bounds(stlm, fy1):
-    import re
-    m = re.match(r'(\d{4})-(\d{2})-(\d{2})', stlm or ''); end = tuple(map(int, m.groups())) if m else (fy1, 12, 31)
-    return (end[0] - 1, end[1], end[2]), end
-
-def row_date_cat(acq, stlm, t):
-    """第 21.1 节的行类别。"""
-    fy1 = t + 1; start, end = fy_bounds(stlm, fy1); cut = (fy1, 4, 30); d = parse_date(acq)
-    if d is None: return 'missing'
-    if d[1] is None:
-        return 'year_only' if d[0] == fy1 else ('earlier' if d[0] < fy1 else 'later')
-    if d <= start: return 'earlier'
-    if d > end: return 'later'
-    return 'before' if d <= cut else 'after'
-
+from date_rules import row_date_cat as _rdc, pair_rows as _pr, pair_date_class   # 规则移到 date_rules.py（与 confirm_datesplit.py 共用），内容未改
+row_date_cat = lambda acq, stlm, t: _rdc(acq, stlm, t, parse_date)
 def pair_rows(pid):
-    p = POS.loc[pid]; t = int(p.fy); R1 = ROWS[t + 1]; out = []
-    for dr in str(p.directions).split('+'):
-        a, b = dr.split('>'); out.append(R1[(R1.src_corp_code == a) & (R1.t == b)])
-    return t, pd.concat(out)
+    p = POS.loc[pid]; t = int(p.fy); return t, _pr(ROWS, t, p.directions)
 
 rec = []
 for pid in POS.index:
     t, rr = pair_rows(pid)
     dc = [row_date_cat(a, s, t) for a, s in zip(rr.frst_acqs_de, rr.stlm_dt)]
-    if 'before' in dc: A_cat = 'before'
-    elif 'after' in dc: A_cat = 'after'
-    else: A_cat = 'unknown:' + next(c for c in ('earlier', 'later', 'year_only', 'missing') if c in dc)
+    A_cat = pair_date_class(dc)
     # B：四分类
     oq, ob, orr = num(rr.bsis_blce_qy), num(rr.bsis_blce_acntbk_amount), num(rr.bsis_blce_qota_rt)
     base, conflict = [], []

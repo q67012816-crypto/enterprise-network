@@ -29,3 +29,4 @@ linkpred/out_confirm_dryrun/*.csv
 linkpred/out_dev_tenure_*/*.csv
 linkpred/out_confirm_tenure_*/*.csv
 linkpred/out_confirm_tenure_*/feat/
+linkpred/out_confirm_datesplit*/positives.csv

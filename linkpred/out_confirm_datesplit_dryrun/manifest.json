@@ -1,0 +1,33 @@
+{
+ "mode": "dry-run",
+ "years": {
+  "train": [
+   2019,
+   2020,
+   2021
+  ],
+  "val": 2022,
+  "test": 2023
+ },
+ "command": "src/confirm_datesplit.py --dry-run --ref out_confirm_dryrun",
+ "started": "2026-11-08 21:57:11 +0900",
+ "git_head": "2f38f977dcfb997285b029fabd234839a6579ce5",
+ "ref": "out_confirm_dryrun",
+ "source_sha256": {
+  "confirm_datesplit.py": "5f98ca68e411c9db6838e156631d707c0c48d09bfedec5973e8a7aadbd86640b",
+  "date_rules.py": "826447cae29ff154f7fc2feb7f4eab23a3a0024bc9376b3e58b92fdd7706023d",
+  "build_v3.py": "fd0eaccd870b87722498bbadb3063b8ebbb8528610924dfb5811962edfb1cd87"
+ },
+ "rebuild_pairs_identical": true,
+ "ref_scores_sha256": {
+  "scores_M1.csv": "032e7506a1562d535bda6b492218507f46b950bd23a60aa03ba16383444f75f5",
+  "scores_M1+il.csv": "cea5a4592385ed3fac024039ed30f975d20a39a111436f64afdc8e914bad018c",
+  "scores_dfgt+port+fine.csv": "1e5458057f3b04a52e0c4da9f4ee9f0ca79e4b0cb66b0380918a16670943a54a",
+  "scores_dfgt+port+fine+il.csv": "78b0a6d0180270f43c66eb4cb6382d58485806d0158b3cc9b3572d17f7866a4e"
+ },
+ "finished": "2026-11-08 21:57:19 +0900",
+ "output_sha256": {
+  "datesplit.json": "dc0280a8c4296ecc6e4541aac7742093a9ea5d82ce6672ef4e99cc68cb4d15a5",
+  "positives.csv": "470d310f5349d0fd5491706953e9ecebf66b34ba655e590c5181721d245d6881"
+ }
+}
