@@ -27,3 +27,5 @@ linkpred/bench/out/c/*_r*.csv
 linkpred/bench/out/c/*.log
 linkpred/out_confirm_dryrun/*.csv
 linkpred/out_dev_tenure_*/*.csv
+linkpred/out_confirm_tenure_*/*.csv
+linkpred/out_confirm_tenure_*/feat/
