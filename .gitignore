@@ -31,3 +31,4 @@ linkpred/out_confirm_tenure_*/*.csv
 linkpred/out_confirm_tenure_*/feat/
 linkpred/out_confirm_datesplit*/positives.csv
 linkpred/out_dev_holdout/*/scores_*.csv
+linkpred/out_dev_rewire/*/*.csv
