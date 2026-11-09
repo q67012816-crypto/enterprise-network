@@ -1,0 +1,28 @@
+{
+ "started": "2026-11-10 00:45:51 +0900",
+ "files": {
+  "scores_M1.csv": "e0c1a8792313b70a73e960347bfec488802cea725e9a88780ccb286e8ad36b74",
+  "scores_M1+il.csv": "e2dc3f4ec4ec82fa5a55f10bb6c3b77d2cf702d5a7139a67718949280d0307ee"
+ },
+ "finished": "2026-11-10 00:45:52 +0900",
+ "data_sha256": {
+  "eligible.csv": "1705e958a114f80e7f3721b1239de174045958f7f74c50d6b04c9cafcee5ae3e",
+  "first_appearance_by_fy.csv": "98c8fd12e1c9eb27cd3b9487b575e4ca64b0282c98e6b4d3d406c966fb809266",
+  "graph_2014.csv": "8a1eedaffc5a4834bd14c627024b080b17dd94e2f255d22b99457d3327d48c5a",
+  "graph_2015.csv": "3431b3f09b64a7f0d0d7cb2885ddecbba5aec8a6b5f23ea3fa3b9544e661604c",
+  "graph_2016.csv": "bf868e46c84870c967a5c658b2350aef0396cee952c555a6126e2e128d368448",
+  "graph_2017.csv": "be011c55073f8098a51fe094c3234aae713faa1185907ce46891558d8494a466",
+  "graph_2018.csv": "a07c9e59429330a9fcc8c6971281dcd3cd6b5b3149eeee143a86c5825a190cc9",
+  "graph_2019.csv": "2f7594980cd52f9461c7bb45ccb758a6bada73fcbe202d0dda0cdbd651574a36",
+  "graph_years.csv": "83f9630d847c4a7f4e4f3c39a9288e290b0fe2507c5fdcb6ed9f08b096618634",
+  "history_undirected.csv": "fd7fb8cf40b36e97c65687b540e057e8c463cbb5f65e2a5817b4f378a6c6dac6",
+  "nodes.csv": "404dee40139ba75a79cf3d8cc20e05846258d816c760e5604bf911f6427050c5",
+  "pairs.csv": "5a6d433b4846c9f3ea16b2618fdda2b4b454c03261bc203cbd876d5caa650a5f",
+  "preexisting_pairs.csv": "a5266c7494eca295669a2b5a252f9d11347def9aec4c6e4e4153bb49af1807bb",
+  "sample_flow.csv": "f93733030488bf3ab537de3e22d0c71ac8d4a478c8a4ce6d6d40a94dbdc22ad5"
+ },
+ "feat_sha256": {
+  "interlock_feats.csv": "a8c573ad343fcb19660d3a2eaa1c47b38de93f615c9d5b046475bf48a6d8c994",
+  "pair_feats.csv": "34ca05a77782594aa75ee81251276b2f7aa88e5b3e9fe495322a6002530c2296"
+ }
+}
