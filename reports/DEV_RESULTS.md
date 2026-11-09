@@ -1632,3 +1632,32 @@ N1、N2 各组的经验 p 值都是 1/21。
 
 两两年份之差（低连接组）：2022−2021 为 +.035 [−.001, +.074]，2023−2021 为 +.015 [−.022, +.058]，2023−2022 为 −.020 [−.066, +.024]。
 - 读法：三个年份的差别不显著（p = .18–.38），没有证据表明效应的大小随年份变化。论文可以写“各年点估计在 .017 到 .052 之间，年份间差异不显著（Cochran Q = 3.2，p = .20）”。只有三个年份，这个检验的功效有限。
+
+### 26.3 NCN 与 BUDDY 官方代码基线：设计（2026-11-09；**写于运行之前**）
+**代码和环境：**
+- 官方代码浅克隆到 `D:\claude data\official_code\`，仓库外，不修改：NeuralCommonNeighbor（GraphPKU，提交 11d5970）、subgraph-sketching（BUDDY，melifluos，提交 3562d94）。
+- 两者都离不开 `torch_sparse`，冻结的 enet 环境装不上，所以另建独立虚拟环境 `D:\claude data\venvs\offlp`：Python 3.12，torch 2.4.1+cpu，torch_sparse 0.6.18，torch_scatter 2.1.2，PyG 2.6.1，datasketch。冻结的 enet 环境不动。
+- 在 CPU 上运行（图约 2,800 个节点）。
+
+**接入方式：** 新代码 `linkpred/src/official_lp2.py`，与第 20.5 节的 `official_kr.py` 做法相同。导入官方模型和函数，接入我们的年度图 G_t、M1 节点特征和点对；评估用组内 AUC。只有下面三处按本研究统一：
+- (1) 正例是训练年的新增持股，不是图中已有的边；每个正例配 1 个负例，从它的 100 个候选负例中随机取，相当于官方的随机负采样；
+- (2) 每轮之后在验证年上计算组内 AUC，保留最好一轮的验证分数；
+- (3) 节点特征用 M1 的节点特征。
+
+**两个模型：**
+- **NCN 官方：**
+  - 模型：官方 `GCN`（`puregcn`）编码器加 `cn1` 预测器（即 NCN）。
+  - 超参数用 README 中 Cora 的设置：hiddim 256，mplayers 1，xdp 0.7，tdp 0.3，gnnedp 0，preedp 0.4，predp 0.05，gnndp 0.05，gnnlr 0.0043，prelr 0.0024，batch 1152，ln、lnnn、jk、use_xlin、tailact 都打开，最多 100 轮。
+  - 损失与官方相同：−log σ(正) − log σ(−负)。负例每轮重新抽。
+  - 消息传递用 G_t 本身。目标边是新增关系，本来就不在 G_t 中，所以不需要官方的目标边屏蔽（maskinput）。
+- **BUDDY 官方：**
+  - 模型：官方 `BUDDY`。结构特征用官方 `ElphHashes`（max_hash_hops 2，hll_p 8，minhash 128 个排列）在 G_t 上计算。节点特征用官方 `HashDataset._generate_sign_features`（sign_k 0，即一步 GCN 归一化传播）。
+  - 超参数用官方默认值，即 README 中 Cora 的命令：hidden 1024，lr 1e-4，batch 1024，label_dropout 0.5，feature_dropout 0.5，use_feature 打开，最多 100 轮，BCE 损失。
+  - 训练负例每个种子抽一次。
+- 两个模型都跑 10 个种子，三折。分数写 `out_dev_gpu10/scores_{ncn,buddy}-official.csv`。
+
+**报告（只报告）：**
+- 低连接、孤立、高连接、全部四组的组内 AUC 和 Δ（10 个种子的平均分数，并报告单模型均值 ± 标准差）。
+- NCN 官方 − DFGT、BUDDY 官方 − DFGT、两者 − M1、两者 − 无图对照，B = 1,000。
+- 孤立组按角色拆分：投资方孤立，或只有候选方孤立。
+- 理论预期（第 IV 节）：两者都依赖共同邻居或子图结构，在孤立端点上结构项为常数，因此预期它们在孤立组不会优于只用节点特征的模型。
