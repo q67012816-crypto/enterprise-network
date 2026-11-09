@@ -35,3 +35,4 @@ linkpred/out_dev_rewire/*/*.csv
 linkpred/out_dev_rewire_nohist/*/*.csv
 linkpred/out_dev_shproxy/*.csv
 linkpred/out_dev_group/*.csv
+linkpred/out_dev_gpu10/_smoke_*.csv

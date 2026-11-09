@@ -1,0 +1,9 @@
+ncn F1 0.7049 20s/seed
+ncn F2 0.7287 26s/seed
+ncn F3 0.7652 29s/seed
+written scores_ncn-official.csv
+buddy F1 0.6538 27s/seed
+buddy F2 0.7051 31s/seed
+buddy F3 0.7684 26s/seed
+written scores_buddy-official.csv
+done
