@@ -27,7 +27,7 @@ Earlier stages of the project (descriptive statistics, node-level prediction, th
 
 ## Data
 
-All data derive from OpenDART. Its terms of use do not grant an explicit redistribution license; matters they do not regulate fall under Korea's Copyright Act and Public Data Act. This repository contains code and firm-level derived data (DART corporate codes, candidate pairs, labels, the evidence used to check that each tie is new, and pair-level counts such as the number of shared directors). It does not contain person-level data such as names or birth months of directors and officers. Readers can rebuild everything with their own API key, read from the environment variable `OPENDART_API_KEY` (never written to code, logs or caches).
+All data derive from OpenDART. Its terms of use do not grant an explicit redistribution license; matters they do not regulate fall under Korea's Copyright Act and Public Data Act. The tracked files contain code and firm-level derived data (DART corporate codes, candidate pairs, labels, the evidence used to check that each tie is new, and pair-level counts such as the number of shared directors). They contain no person-level data such as names or birth months of directors and officers. Readers can rebuild everything with their own API key, read from the environment variable `OPENDART_API_KEY` (never written to code, logs or caches).
 
 ## Reproducing
 
