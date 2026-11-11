@@ -77,8 +77,9 @@ elif cmd == 'regress':
         R = pd.read_csv(L / 'out_dev_rewire/real' / f'scores_{v}.csv', dtype={'pair_id': str, 'anchor': str, 'other': str})
         a = S0.sort_values(['pair_id', 'other']).score.values; b = R.sort_values(['pair_id', 'other']).score.values
         print(v, 'regression max|diff| on original rows:', float(np.abs(a - b).max()) if len(a) == len(b) else f'LEN {len(a)} vs {len(b)}')
-elif cmd == 'eval':
-    deg = {t: collections.Counter(list(g.src) + list(g.dst)) for t in VAL for g in [rd(DX / f'graph_{t}.csv')]}
+elif cmd in ('eval', 'eval-fix'):
+    FIX = cmd == 'eval-fix'   # DEV_RESULTS 28.2: full-candidate set = extension rows only (each negative once)
+    deg ={t: collections.Counter(list(g.src) + list(g.dst)) for t in VAL for g in [rd(DX / f'graph_{t}.csv')]}
     il = pd.read_csv(FT / 'interlock_feats.csv', index_col='row')
     sig = (il[['il_direct', 'il_inside', 'il_2hop', 'il_hist']] > 0).any(axis=1)
     XP = pd.read_csv(DF / 'pairs.csv', dtype={'anchor': str, 'other': str, 'pair_id': str})
@@ -88,7 +89,7 @@ elif cmd == 'eval':
         r = {}
         for pid, g in S.groupby('pair_id'):
             p = g[g.label == 1].iloc[0]
-            n = g if full else g[g.split != 'fullcand']
+            n = (g[g.split == 'fullcand'] if FIX else g) if full else g[g.split != 'fullcand']
             n = n[n.label == 0]
             s = p.score; rk = 1 + (n.score.values > s).sum() + .5 * (n.score.values == s).sum()
             r[pid] = (p.fold, p.anchor, int(p.fy), min(deg[p.fy][p.anchor], deg[p.fy][p.other]),
@@ -123,5 +124,14 @@ elif cmd == 'eval':
     lo = res['primary_full']['low']
     res['verdict'] = '全候选集下保持' if lo[3] > 0 else ('方向一致但不显著' if lo[0] > 0 else '不保持')
     res['ratio_low_full_vs_u100'] = round(lo[0] / res['u100_same_scores']['low'][0], 3) if res['u100_same_scores']['low'][0] else None
-    json.dump(res, open(OF / 'fullcand_eval.json', 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    if FIX:   # Proposition 4 decomposition (s = any interlock feature > 0 on the positive pair), in-script so it is reproducible
+        psig = sig[(XP.label == 1).values]; psig.index = XP.pair_id[(XP.label == 1).values].values
+        W['spos'] = psig.reindex(W.index).fillna(False).astype(bool)
+        for f in ('full', 'u100'):
+            dd = (W[f'M1+il|{f}|auc'] - W[f'M1|{f}|auc']).values; res[f'prop4_{f}'] = {}
+            for g in ('low', 'iso'):
+                m = GR[g]; sp = W.spos.values & m; n_ = m.sum()
+                res[f'prop4_{f}'][g] = dict(Splus_share=round(float(sp.sum() / n_), 4), bound=round(float((1 - W[f'M1|{f}|auc'].values[sp]).sum() / n_), 4),
+                                            gain_from_Splus=round(float(dd[sp].sum() / n_), 4), gain_rest=round(float(dd[m & ~W.spos.values].sum() / n_), 4), total=round(float(dd[m].mean()), 4))
+    json.dump(res, open(OF / ('fullcand_eval_fix.json' if FIX else 'fullcand_eval.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     print(json.dumps(res, ensure_ascii=False, indent=1))
