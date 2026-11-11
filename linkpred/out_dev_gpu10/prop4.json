@@ -1,0 +1,170 @@
+{
+ "M1": {
+  "il_direct>0": {
+   "all": {
+    "n": 575,
+    "S_plus_share": 0.0452,
+    "neg_signal_share": 0.00037,
+    "base_auc": 0.6833,
+    "upper_bound": 0.0169,
+    "oracle_gain": 0.0166,
+    "learned_gain": 0.0238
+   },
+   "low": {
+    "n": 372,
+    "S_plus_share": 0.0618,
+    "neg_signal_share": 0.0003,
+    "base_auc": 0.5967,
+    "upper_bound": 0.0248,
+    "oracle_gain": 0.0246,
+    "learned_gain": 0.0342
+   },
+   "iso": {
+    "n": 248,
+    "S_plus_share": 0.0524,
+    "neg_signal_share": 0.0002,
+    "base_auc": 0.5661,
+    "upper_bound": 0.0231,
+    "oracle_gain": 0.023,
+    "learned_gain": 0.0339
+   }
+  },
+  "any_il>0": {
+   "all": {
+    "n": 575,
+    "S_plus_share": 0.0783,
+    "neg_signal_share": 0.00157,
+    "base_auc": 0.6833,
+    "upper_bound": 0.029,
+    "oracle_gain": 0.0282,
+    "learned_gain": 0.0238
+   },
+   "low": {
+    "n": 372,
+    "S_plus_share": 0.0968,
+    "neg_signal_share": 0.00145,
+    "base_auc": 0.5967,
+    "upper_bound": 0.0424,
+    "oracle_gain": 0.0418,
+    "learned_gain": 0.0342
+   },
+   "iso": {
+    "n": 248,
+    "S_plus_share": 0.0847,
+    "neg_signal_share": 0.00113,
+    "base_auc": 0.5661,
+    "upper_bound": 0.0365,
+    "oracle_gain": 0.0361,
+    "learned_gain": 0.0339
+   }
+  }
+ },
+ "dfgt+port+fine": {
+  "il_direct>0": {
+   "all": {
+    "n": 575,
+    "S_plus_share": 0.0452,
+    "neg_signal_share": 0.00037,
+    "base_auc": 0.748,
+    "upper_bound": 0.0078,
+    "oracle_gain": 0.0075,
+    "learned_gain": 0.0127
+   },
+   "low": {
+    "n": 372,
+    "S_plus_share": 0.0618,
+    "neg_signal_share": 0.0003,
+    "base_auc": 0.6716,
+    "upper_bound": 0.012,
+    "oracle_gain": 0.0118,
+    "learned_gain": 0.0208
+   },
+   "iso": {
+    "n": 248,
+    "S_plus_share": 0.0524,
+    "neg_signal_share": 0.0002,
+    "base_auc": 0.6326,
+    "upper_bound": 0.0094,
+    "oracle_gain": 0.0094,
+    "learned_gain": 0.0254
+   }
+  },
+  "any_il>0": {
+   "all": {
+    "n": 575,
+    "S_plus_share": 0.0783,
+    "neg_signal_share": 0.00157,
+    "base_auc": 0.748,
+    "upper_bound": 0.0132,
+    "oracle_gain": 0.0123,
+    "learned_gain": 0.0127
+   },
+   "low": {
+    "n": 372,
+    "S_plus_share": 0.0968,
+    "neg_signal_share": 0.00145,
+    "base_auc": 0.6716,
+    "upper_bound": 0.0201,
+    "oracle_gain": 0.0195,
+    "learned_gain": 0.0208
+   },
+   "iso": {
+    "n": 248,
+    "S_plus_share": 0.0847,
+    "neg_signal_share": 0.00113,
+    "base_auc": 0.6326,
+    "upper_bound": 0.016,
+    "oracle_gain": 0.0156,
+    "learned_gain": 0.0254
+   }
+  }
+ },
+ "learned_gain_decomposition_any_il": {
+  "M1": {
+   "all": {
+    "learned": 0.0238,
+    "from_S_plus": 0.0257,
+    "from_others": -0.0019,
+    "S_plus_mean_gain": 0.328,
+    "others_mean_gain": -0.0021
+   },
+   "low": {
+    "learned": 0.0342,
+    "from_S_plus": 0.0374,
+    "from_others": -0.0032,
+    "S_plus_mean_gain": 0.387,
+    "others_mean_gain": -0.0036
+   },
+   "iso": {
+    "learned": 0.0339,
+    "from_S_plus": 0.0364,
+    "from_others": -0.0025,
+    "S_plus_mean_gain": 0.43,
+    "others_mean_gain": -0.0028
+   }
+  },
+  "dfgt+port+fine": {
+   "all": {
+    "learned": 0.0127,
+    "from_S_plus": 0.0127,
+    "from_others": -0.0,
+    "S_plus_mean_gain": 0.162,
+    "others_mean_gain": -0.0
+   },
+   "low": {
+    "learned": 0.0208,
+    "from_S_plus": 0.0194,
+    "from_others": 0.0013,
+    "S_plus_mean_gain": 0.201,
+    "others_mean_gain": 0.0015
+   },
+   "iso": {
+    "learned": 0.0254,
+    "from_S_plus": 0.016,
+    "from_others": 0.0094,
+    "S_plus_mean_gain": 0.19,
+    "others_mean_gain": 0.0102
+   }
+  }
+ }
+}

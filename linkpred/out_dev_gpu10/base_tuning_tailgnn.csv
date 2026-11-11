@@ -1,0 +1,9 @@
+model,fold,cfg,hid,lr,val_auc,sec_per_seed
+tailgnn,F1,0,64,0.001,0.5771,2.9
+tailgnn,F1,1,64,0.01,0.6692,1.7
+tailgnn,F1,2,128,0.001,0.6424,3.3
+tailgnn,F1,3,128,0.01,0.6586,1.2
+tailgnn,F2,0,64,0.001,0.5972,5.0
+tailgnn,F2,1,64,0.01,0.6256,2.3
+tailgnn,F2,2,128,0.001,0.6186,2.8
+tailgnn,F2,3,128,0.01,0.6659,3.7

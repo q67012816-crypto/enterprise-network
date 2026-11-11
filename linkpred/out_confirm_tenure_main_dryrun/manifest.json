@@ -1,0 +1,118 @@
+{
+ "mode": "main",
+ "dry_run": true,
+ "years": {
+  "train": [
+   2019,
+   2020,
+   2021
+  ],
+  "val": 2022,
+  "test": 2023
+ },
+ "feats": {
+  "started_command": "src/confirm_tenure.py feats --mode main --dry-run",
+  "git_head": "334fc5f6e9c47493481641d8cff83463256e0dd7",
+  "exec_panel_sha256": "6f969e5b78132c7f1ebdefe4a36ef51d92a7f74ff4b09734cdd691f4b95e26c5",
+  "tenure_rules_sha256": "abda5f086b9d7e9522abcc4ec6daac87da72c8fc3c36ca5e80915c47b7350ab0",
+  "interlock_feats_py_sha256": "936e3b0b421ecc918c1f80dd43e2a81bb7fcb43d1fa38eae6870774a5e33a20c",
+  "frozen_feat_dir": "out_dev",
+  "output_sha256": {
+   "hyslr_feats.csv": "7d06740d2be94a3bf003041f21c1412b89b7a768e0db008147da4383714f02b0",
+   "interlock_feats.csv": "76563d9f7e3805aeb8f89bdd2f1a9278932d89d70833a30a10ae3d1cb903e958",
+   "pair_feats.csv": "1811ec8ca2a0a72832ddbae603b67a3d137b4c74e345e650aae5b60112bfcf67"
+  },
+  "rows_used": 134075,
+  "category_share_by_fy": {
+   "2019": {
+    "duration": 0.5233,
+    "lower": 0.0083,
+    "short": 0.0077,
+    "start": 0.354,
+    "unparsed": 0.1067
+   },
+   "2020": {
+    "duration": 0.5195,
+    "lower": 0.0067,
+    "short": 0.0056,
+    "start": 0.3625,
+    "unparsed": 0.1056
+   },
+   "2021": {
+    "duration": 0.5086,
+    "lower": 0.0063,
+    "short": 0.0071,
+    "start": 0.3709,
+    "unparsed": 0.1072
+   },
+   "2022": {
+    "duration": 0.5223,
+    "lower": 0.0045,
+    "short": 0.0059,
+    "start": 0.37,
+    "unparsed": 0.0973
+   },
+   "2023": {
+    "duration": 0.5269,
+    "lower": 0.0029,
+    "short": 0.0055,
+    "start": 0.3745,
+    "unparsed": 0.0903
+   }
+  },
+  "dropped_share_by_fy": {
+   "2019": 0.0231,
+   "2020": 0.0221,
+   "2021": 0.022,
+   "2022": 0.0191,
+   "2023": 0.0199
+  },
+  "dropped_share": 0.0211
+ },
+ "run": {
+  "command": "src/confirm_tenure.py run --mode main --dry-run --ref out_confirm_dryrun",
+  "started": "2026-11-08 21:11:54 +0900",
+  "git_head": "334fc5f6e9c47493481641d8cff83463256e0dd7",
+  "ref": "out_confirm_dryrun",
+  "ref_git_head": "3e7c1cbd7e31183594c292ebbeef9be85f53c8ef",
+  "data_sha256": {
+   "eligible.csv": "f1e0281ebe46e991761dcdb542668c156fafd2c3b05c881c9a7085b67609c8c8",
+   "first_appearance_by_fy.csv": "cb722f4f7ee8dd3f98ab1774bc8df788d634ea414e176fe9c2ef6388fc60df62",
+   "graph_2019.csv": "9f91b0995635003e6a17644ab1942faec13b9dd5cd5cae5ba98be509c2a28b8b",
+   "graph_2020.csv": "7e87ea6acc7a9003d48b91643e05ee7c70bb5b7e516cd3714208d0709b1bc12f",
+   "graph_2021.csv": "08960677dfc8abfc8b98e19cbd98b27cd1003f8e7cbf6680bffca959a0e58e16",
+   "graph_2022.csv": "3cb85eb33031230ef4561c63ea2bd824d4ee65a40b74f346480560462b7db887",
+   "graph_2023.csv": "0608295bf355b590fa887dfaa95b7914e496b50546c95358f2227e604305d5b9",
+   "graph_2024.csv": "581c40793295118c1556277117f743ff02948884495b6457418aca4d0f5d681e",
+   "graph_2025.csv": "9f7259a2ada6a5f585d8b954382d2ecbeae94152f357a9f1aac7955469637cc1",
+   "graph_years.csv": "f3d079b4340f1ad9a2e0907abd79bd74c6d89214220903c25fb59c6040f650ee",
+   "history_undirected.csv": "157c33fdc87cd1dfb4e7a6bb6c0a7c153580d4a0b4d4113f87093ec3c90a3c22",
+   "nodes.csv": "a4423f4c55d2d64d997110342d18ea7698c7e327fe52c048c28bb7b9ec43f710",
+   "pairs.csv": "9ecbc65c7dc5e501f3daa87c5127c366e1692d9ebb2f8fce1aa3d1bf87b9c953",
+   "preexisting_pairs.csv": "43f8c219d7d0fb00b63bdbd4e3ef2b6adf4b631885ec20069609919ad8c7f791",
+   "sample_flow.csv": "f40c2ffd0864914e6041da7674ab3e0b4c1f1e1fd264d1c0613dfe011da395ee",
+   "unit_checks.csv": "6dfe902b7552e6cc6cbd2e823bd3a855c824702bd967bc62554f0846343c3092"
+  },
+  "files": {
+   "val_scores_M1+il.csv": "dfee0888f3c53c46e101b77562a0f269079c02b4a1d3aabd8b4fee2f13958046",
+   "scores_M1+il.csv": "3de5cac093077afeb5e06932592f5cc84c29a39e406222078f6904bd974042b1",
+   "val_scores_dfgt+port+fine+il.csv": "ce73a65609c28857450bd40002a14f1c64502eb9c524b82374dda24a7050fa03",
+   "scores_dfgt+port+fine+il.csv": "b358515aff4f27139a71a6e30ee25ab3b4b84653331fe0d1449bdb0411956f06",
+   "ref:scores_M1.csv": "032e7506a1562d535bda6b492218507f46b950bd23a60aa03ba16383444f75f5",
+   "ref:scores_dfgt+port+fine.csv": "1e5458057f3b04a52e0c4da9f4ee9f0ca79e4b0cb66b0380918a16670943a54a"
+  },
+  "val_auc": {
+   "M1+il": 0.7079,
+   "dfgt+port+fine+il": 0.7486
+  },
+  "seconds": {
+   "M1+il": 0.8,
+   "dfgt+port+fine+il": 114.3
+  },
+  "finished": "2026-11-08 21:13:49 +0900"
+ },
+ "eval": {
+  "finished": "2026-11-08 21:14:28 +0900",
+  "result_sha256": "c726745d3b1f521e3ac1d17fb61a9c389c8d982a44fbdb2635b72ab0edd1d5f0"
+ }
+}

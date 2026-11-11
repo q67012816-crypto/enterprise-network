@@ -1,0 +1,9 @@
+model,fold,cfg,hid,lr,val_auc,sec_per_seed
+coldbrew,F1,0,64,0.001,0.5081,1.2
+coldbrew,F1,1,64,0.01,0.671,0.7
+coldbrew,F1,2,128,0.001,0.5662,0.6
+coldbrew,F1,3,128,0.01,0.6767,0.8
+coldbrew,F2,0,64,0.001,0.5674,0.9
+coldbrew,F2,1,64,0.01,0.6399,1.6
+coldbrew,F2,2,128,0.001,0.5401,0.8
+coldbrew,F2,3,128,0.01,0.6337,1.3
