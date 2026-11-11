@@ -2,7 +2,7 @@
 
 Code, logs and firm-level data for a study of **degree bias in link prediction on the ownership network of Korean listed firms**, built from public disclosures retrieved through OpenDART (Financial Supervisory Service, Korea).
 
-The accompanying paper is *When Degree Debiasing Meets Zero-Degree Nodes: As-of Link Prediction and Personnel Interlocks in a Corporate Ownership Network* (under submission). It predicts which listed firm an investor will newly take a stake in next year, under as-of rules (every input filed by the prediction date), with a separate zero-degree group, no-graph controls, 10-seed ensembles, and a preregistered confirmatory test on FY2025→26.
+The accompanying paper is *Link Prediction for Firms Without Ties: Zero-Degree Nodes, As-of Evaluation and Personnel Interlocks in a Corporate Ownership Network* (under submission). It predicts which listed firm an investor will newly take a stake in next year, under as-of rules (every input filed by the prediction date), with a separate zero-degree group, no-graph controls, 10-seed ensembles, and a preregistered confirmatory test on FY2025→26.
 
 ## Where to look
 
