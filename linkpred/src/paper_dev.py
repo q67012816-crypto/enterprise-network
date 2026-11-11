@@ -74,6 +74,7 @@ VARIANTS = {   # 名称: (模型, 选项)
     # 第 18.1 节：训练时的节点级边丢弃（每个训练年 G_t 中比例 q 的度 > 0 节点不参与消息传递，训练正例不变；验证年用完整 G_t）
     'dfgt-ed10': ('dfgt', dict(target=False, ed=0.1)), 'dfgt-ed30': ('dfgt', dict(target=False, ed=0.3)),
     'sage-ed10': ('sage', dict(target=False, ed=0.1)), 'sage-ed30': ('sage', dict(target=False, ed=0.3)), 'degfair': ('base', dict(name='degfair')), 'tailgnn': ('base', dict(name='tailgnn')),
+    'nodedup': ('base', dict(name='nodedup')), 'nodedup-l': ('base', dict(name='nodedup-l')), 'deal': ('base', dict(name='deal')),   # 第 30.2 节
     'M1+il-lenient': ('lr', dict(C=0.1, target=False, scores=False, pf=('il_len',))),
     'M1-noindmkt': ('lr', dict(C=0.1, target=False, scores=False, noindmkt=True)),   # 修订 A8 第 2.1 节的敏感性：M1 不含行业和市场   # 敏感性：保留 C_t 后才提交的更正年报
     'M1+pf': ('lr', dict(C=0.1, target=False, scores=False, pf=('port', 'ind'))),
@@ -291,7 +292,8 @@ def run_base(X, Ys, tr_years, va_year, name, seed, cfg):
         from seal import run_seal_kr
         return run_seal_kr(X, Ys, tr_years, va_year, seed, cfg, fast_auc)
     years = list(tr_years) + [va_year]; xs = {t: torch.tensor(Ys[t]['x']) for t in years}
-    m = BASELINES[name](xs[va_year].shape[1], hid=cfg['hid']); Ps = {t: m.prepare(Ys[t]) for t in years}
+    all_ids = sorted({c for t in years for c in Ys[t]['ids']})   # DEAL 的结构嵌入表（第 30.2 节）；其他基线忽略
+    m = BASELINES[name](xs[va_year].shape[1], hid=cfg['hid'], all_ids=all_ids); Ps = {t: m.prepare(Ys[t]) for t in years}
     TR, VA = X[X.fy.isin(tr_years)], X[X.fy == va_year]; PI_tr, PI_va = pair_idx(Ys, TR), pair_idx(Ys, VA)
     y = torch.tensor(X.label.values, dtype=torch.float32); ntr = len(TR)
     def score():
@@ -307,7 +309,9 @@ def run_base(X, Ys, tr_years, va_year, name, seed, cfg):
             for t, (u, v, ix) in PI_tr.items():
                 h, aux = m.embed(xs[t], Ps[t])
                 if kd_only: loss = loss + aux / len(PI_tr); continue
-                pl = torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, u, v), y[ix], reduction='none')
+                pl = m.pair_loss(h, u, v, y[ix]) if hasattr(m, 'pair_loss') else torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, u, v), y[ix], reduction='none')
+                if 'extra' in Ps[t]:   # NodeDup：冷节点的额外正例监督（第 30.2 节）
+                    eu, ev = Ps[t]['extra']; loss = loss + torch.nn.functional.binary_cross_entropy_with_logits(m.dec(h, eu, ev), torch.ones(len(eu)), reduction='sum') / ntr
                 loss = loss + pl.sum() / ntr + aux / len(PI_tr)
                 if name == 'degfair': loss = loss + m.fair_loss(pl, Ps[t], u, v) / len(PI_tr)
             loss.backward(); opt_.step(); s = score(); a = fast_auc(VA, s)
@@ -420,7 +424,8 @@ def evaluate():
     for a, b in [('dfgt', 'M1'), ('dfgt', 'sage'), ('dfgt', 'dfgt-noaug'), ('dfgt', 'dfgt-nosim'), ('dfgt', 'dfgt-nossl'), ('dfgt0', 'dfgt'), ('dfgt-soft', 'dfgt'), ('dfgt-soft', 'dfgt-noaug'), ('dfgt0-soft', 'dfgt-soft'), ('dfgt-soft', 'M1'), ('dfgt-soft', 'sage'), ('dfgt-soft', 'dfgt-soft-nossl'), ('dfgt', 'dfgt-nograph'), ('dfgt-nograph', 'M1'),
                  ('dfgt+T', 'dfgt'), ('dfgt0+T', 'dfgt'), ('M1+T', 'M1'), ('sage+T', 'sage'), ('M1+scores', 'M1'),
                  ('M1+ind', 'M1'), ('M1+port', 'M1'), ('M1+pf', 'M1'), ('M1+fine', 'M1'), ('M1+hist', 'M1'), ('M1+port+fine', 'M1'), ('M1+il', 'M1'), ('M1+port+il', 'M1+port'), ('M1+pf+il', 'M1+pf'), ('M1+il-lenient', 'M1'), ('dfgt+il', 'dfgt'), ('dfgt+pf+il', 'dfgt'), ('dfgt-nograph+il', 'dfgt-nograph'), ('dfgt+il', 'M1+il'), ('dfgt+ile', 'dfgt'), ('dfgt+ile+il', 'dfgt'), ('dfgt+ile+il', 'dfgt+il'), ('dfgt+ile+pf+il', 'dfgt'), ('dfgt+ile_in', 'dfgt'), ('sage+ile', 'sage'), ('dfgt+ile', 'M1+il'), ('ens:dfgt|M1+il', 'dfgt'), ('ens:dfgt|M1+il', 'ens:dfgt|M1'), ('ens:dfgt|M1', 'dfgt'), ('dfgt+port+fine+il', 'dfgt+port+fine'), ('dfgt+port+fine', 'dfgt'), ('M1+port+fine+il', 'M1+port+fine'), ('dfgt+pf', 'dfgt+port+fine'), ('M1+hs', 'M1'), ('gae', 'dfgt'), ('gae', 'dfgt-nograph'), ('gae', 'sage'), ('coldbrew', 'dfgt'), ('coldbrew', 'dfgt-nograph'), ('coldbrew', 'sage'), ('degfair', 'dfgt'), ('degfair', 'dfgt-nograph'), ('degfair', 'sage'), ('tailgnn', 'dfgt'), ('tailgnn', 'dfgt-nograph'), ('tailgnn', 'sage'), ('dcm', 'dfgt+port+fine+il'), ('dcm', 'M1+il'), ('dcm', 'dcm-noA'), ('dcm', 'dcm-noB'), ('dcm', 'dcm-noC'), ('dcm-noA', 'dfgt+port+fine+il'), ('dcm-noB', 'dfgt+port+fine+il'), ('dcm-noC', 'dfgt+port+fine+il'), ('M1+car', 'M1'), ('M1+il+car', 'M1+il'), ('M1+ms', 'M1'), ('M1+il+ms', 'M1+il'), ('dfgt+port+fine+il+car', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+ms', 'dfgt+port+fine+il'), ('dfgt+port+fine+il+hs', 'dfgt+port+fine+il'), ('M1+port+fine+il+hs', 'M1+port+fine+il'), ('M1+il+hs', 'M1+il'), ('M1+pf+il+hs', 'M1+pf+il'), ('M1+hs-lenient', 'M1'), ('dfgt+pf+hs', 'dfgt+pf'), ('dfgt+pf+il+hs', 'dfgt+pf+il'), ('dfgt+ile+pf+il+hs', 'dfgt+ile+pf+il'), ('dfgt+pf+il+hs', 'dfgt'), ('dfgt+pf+il', 'dfgt+pf'), ('dfgt+ile+pf+il', 'dfgt+pf+il'), ('dfgt+pf+il', 'M1+pf+il'), ('dfgt+pf', 'dfgt'), ('dfgt-nograph+pf', 'dfgt-nograph'), ('dfgt+pf', 'M1+pf'),
-                 ('dfgt-ed10', 'dfgt'), ('dfgt-ed30', 'dfgt'), ('dfgt-ed10', 'dfgt-nograph'), ('dfgt-ed30', 'dfgt-nograph'), ('sage-ed10', 'sage'), ('sage-ed30', 'sage'), ('coldbrew2', 'dfgt'), ('coldbrew2', 'dfgt-nograph'), ('coldbrew2', 'coldbrew'), ('seal', 'dfgt'), ('seal', 'dfgt-nograph'), ('seal', 'sage'), ('seal', 'M1'), ('M1-noindmkt', 'M1')]:   # 第 18 节 C1–C3；最后一项为 A8 敏感性
+                 ('dfgt-ed10', 'dfgt'), ('dfgt-ed30', 'dfgt'), ('dfgt-ed10', 'dfgt-nograph'), ('dfgt-ed30', 'dfgt-nograph'), ('sage-ed10', 'sage'), ('sage-ed30', 'sage'), ('coldbrew2', 'dfgt'), ('coldbrew2', 'dfgt-nograph'), ('coldbrew2', 'coldbrew'), ('seal', 'dfgt'), ('seal', 'dfgt-nograph'), ('seal', 'sage'), ('seal', 'M1'), ('M1-noindmkt', 'M1'),
+                 ('nodedup', 'dfgt'), ('nodedup', 'dfgt-nograph'), ('nodedup', 'sage'), ('nodedup-l', 'dfgt'), ('nodedup-l', 'dfgt-nograph'), ('nodedup-l', 'sage'), ('deal', 'dfgt'), ('deal', 'dfgt-nograph'), ('deal', 'sage')]:   # 第 18 节 C1–C3；最后一项为 A8 敏感性
         if a in vs and b in vs and (not A.only or f'{a}:{b}' in A.only.split(',')):
             comps[f'{a} − {b}'] = {g: ci(lambda U, a=a, b=b, g=g: mean(a, g)(U) - mean(b, g)(U)) for g in ('all', 'low', 'high', 'iso')}
             comps[f'{a} − {b}']['gap_reduction'] = ci(lambda U, a=a, b=b: gap(b)(U) - gap(a)(U))

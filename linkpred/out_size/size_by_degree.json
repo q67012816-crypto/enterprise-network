@@ -1,0 +1,59 @@
+{
+ "firm_years": 13018,
+ "isolated_share_by_fy": {
+  "2019": 0.625,
+  "2020": 0.602,
+  "2021": 0.548,
+  "2022": 0.493,
+  "2023": 0.455
+ },
+ "by_group": {
+  "0": {
+   "n": 7048,
+   "assets_median_bn_krw": 105.2,
+   "assets_q25": 59.6,
+   "assets_q75": 217.5,
+   "financials_missing": 0.289,
+   "market_share": {
+    "K": 0.6,
+    "Y": 0.188,
+    "E": 0.174,
+    "N": 0.038
+   }
+  },
+  "1": {
+   "n": 3115,
+   "assets_median_bn_krw": 181.7,
+   "assets_q25": 89.8,
+   "assets_q75": 418.6,
+   "financials_missing": 0.187,
+   "market_share": {
+    "K": 0.556,
+    "Y": 0.324,
+    "E": 0.095,
+    "N": 0.025
+   }
+  },
+  "2+": {
+   "n": 2855,
+   "assets_median_bn_krw": 407.8,
+   "assets_q25": 181.6,
+   "assets_q75": 1212.7,
+   "financials_missing": 0.146,
+   "market_share": {
+    "Y": 0.54,
+    "K": 0.392,
+    "E": 0.06,
+    "N": 0.008
+   }
+  }
+ },
+ "isolated_share_by_asset_quartile": {
+  "Q1_small": 0.716,
+  "Q2": 0.611,
+  "Q3": 0.426,
+  "Q4_large": 0.255
+ },
+ "P_connected_larger_than_isolated": 0.712,
+ "mannwhitney_p": 1.4511875225056382e-295
+}
