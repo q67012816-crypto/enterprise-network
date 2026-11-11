@@ -1,0 +1,9 @@
+model,fold,cfg,hid,lr,val_auc,sec_per_seed
+nodedup-l,F1,0,64,0.001,0.6535,3.1
+nodedup-l,F1,1,64,0.01,0.676,1.0
+nodedup-l,F1,2,128,0.001,0.6698,1.5
+nodedup-l,F1,3,128,0.01,0.6589,1.7
+nodedup-l,F2,0,64,0.001,0.7004,2.4
+nodedup-l,F2,1,64,0.01,0.7102,1.9
+nodedup-l,F2,2,128,0.001,0.7123,2.3
+nodedup-l,F2,3,128,0.01,0.7051,2.2

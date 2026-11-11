@@ -106,5 +106,57 @@ class ColdBrew2(ColdBrew):
     def stage_params(s):
         return list(s.t.parameters()) + list(s.dec_.parameters()) if s.stage == 1 else list(s.stu.parameters())
 
-BASELINES = {'gae': GAE, 'coldbrew': ColdBrew, 'coldbrew2': ColdBrew2, 'degfair': DegFair, 'tailgnn': TailGNN}
+
+# ======================= 冷启动链路预测基线（DEV_RESULTS 第 30.2 节；按论文重写，不是官方实现） =======================
+NODEDUP_DELTA = 2   # 原文：冷节点 = 度 ≤ δ，δ = 2
+
+class NodeDup(nn.Module):
+    """NodeDup（Guo et al. 2024）：每个冷节点复制一次（特征相同），原节点–复制节点之间加一条边（参与消息传递），
+    并把 (v, v′) 作为额外正例监督。light=True 时为 NodeDup(L)：不复制，只加自环边并以 (v, v) 为额外正例。
+    编码器 = 2 层 GraphSAGE 均值聚合，解码器 = 内积（原文默认）。"""
+    light = False
+    def __init__(s, fin, hid=128, drop=0.3, **kw):
+        super().__init__(); s.e = SageEnc(fin, hid, drop)
+    def prepare(s, Y):
+        n = len(Y['ids']); cold = np.where(np.asarray(Y['deg']) <= NODEDUP_DELTA)[0]
+        if s.light: extra = [(int(v), int(v)) for v in cold]; m = n; ev = torch.tensor(cold)
+        else: extra = [(int(v), n + k) for k, v in enumerate(cold)]; m = n + len(cold); ev = torch.arange(n, n + len(cold))
+        return dict(A=sparse_mean_adj(m, list(Y['edges']) + extra), cold=torch.tensor(cold), extra=(torch.tensor(cold), ev))
+    def embed(s, x, P):
+        h = x if s.light else torch.cat([x, x[P['cold']]], 0)
+        for k, (a, b) in enumerate(zip(s.e.self_l, s.e.nb_l)):
+            h = a(h) + b(torch.sparse.mm(P['A'], h))
+            if k == 0: h = s.e.drop(torch.relu(h))
+        return h, torch.zeros(())
+    def dec(s, h, u, v): return (h[u] * h[v]).sum(-1) / h.shape[1] ** .5
+
+class NodeDupL(NodeDup):
+    light = True
+
+DEAL_GAMMA = 5.
+class DEAL(nn.Module):
+    """DEAL（Hao et al. 2020）：属性编码器 H_a（2 层 MLP，ELU）+ 结构编码器 H_s（每家企业一个可学习嵌入，跨年共享）；余弦相似度；
+    损失 = L_B(Z_s) + L_B(Z_a) + 松对齐（两个方向平均），L_B 为广义 logistic φ(x) = (1/γ)log(1+e^{−γx})，γ = 5。
+    打分：两端度都 > 0：s_ss + s_aa + 松对齐均值；恰有一端度 = 0：s_aa + s(z_s 已知端, z_a 孤立端)；两端都为 0：s_aa。"""
+    def __init__(s, fin, hid=128, drop=0.3, all_ids=(), **kw):
+        super().__init__(); s.hid = hid
+        s.ha = nn.Sequential(nn.Linear(fin, hid), nn.ELU(), nn.Dropout(drop), nn.Linear(hid, hid))
+        s.gid = {c: i for i, c in enumerate(all_ids)}; s.es = nn.Embedding(max(len(all_ids), 1), hid)
+        nn.init.normal_(s.es.weight, std=0.1)
+    def prepare(s, Y): return dict(g=torch.tensor([s.gid[c] for c in Y['ids']]), known=torch.tensor(np.asarray(Y['deg']) > 0, dtype=torch.float32))
+    def embed(s, x, P): return torch.cat([s.ha(x), s.es(P['g']), P['known'][:, None]], -1), torch.zeros(())
+    def _sims(s, h, u, v):
+        za, zs, k = h[:, :s.hid], h[:, s.hid:2 * s.hid], h[:, -1]
+        cs = lambda a, b: F.cosine_similarity(a, b, dim=-1)
+        return cs(zs[u], zs[v]), cs(za[u], za[v]), cs(zs[u], za[v]), cs(za[u], zs[v]), k[u], k[v]
+    def dec(s, h, u, v):
+        ss, aa, sa, as_, ku, kv = s._sims(h, u, v)
+        both, onlyu, onlyv = ku * kv, ku * (1 - kv), (1 - ku) * kv
+        return aa + both * (ss + (sa + as_) / 2) + onlyu * sa + onlyv * as_
+    def pair_loss(s, h, u, v, y):
+        ss, aa, sa, as_, _, _ = s._sims(h, u, v); g = DEAL_GAMMA
+        bce = lambda z: F.binary_cross_entropy_with_logits(g * z, y, reduction='none') / g
+        return bce(ss) + bce(aa) + (bce(sa) + bce(as_)) / 2
+
+BASELINES = {'gae': GAE, 'coldbrew': ColdBrew, 'coldbrew2': ColdBrew2, 'degfair': DegFair, 'tailgnn': TailGNN, 'nodedup': NodeDup, 'nodedup-l': NodeDupL, 'deal': DEAL}
 BASE_GRID = [dict(hid=h, lr=lr) for h in (64, 128) for lr in (1e-3, 1e-2)]   # 每个基线 4 个配置，只在 F1、F2 上选（第 16.2 节）
